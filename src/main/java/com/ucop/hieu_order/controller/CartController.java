@@ -12,101 +12,109 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.util.StringConverter;
 
-import java.math.BigDecimal;
-
 public class CartController {
 
     @FXML private ComboBox<Hai_Item> cbProducts;
     @FXML private TextField txtQuantity;
     @FXML private TableView<Hieu_OrderItem> tableCart;
-    @FXML private Label lblTotal;
+    
+    // Các Label hiển thị tiền
+    @FXML private Label lblSubTotal;
+    @FXML private Label lblTax;
+    @FXML private Label lblShip;
+    @FXML private Label lblDiscount;
+    @FXML private Label lblGrandTotal;
+    
+    @FXML private TextField txtPromoCode;
 
     private OrderService orderService = new OrderService();
-    private Hieu_Order currentOrder; // Đơn hàng đang tạo
+    private Hieu_Order currentOrder;
     private ObservableList<Hieu_OrderItem> cartItems;
 
     @FXML
     public void initialize() {
-        // 1. Khởi tạo đơn hàng rỗng
         currentOrder = new Hieu_Order();
         cartItems = FXCollections.observableArrayList();
         tableCart.setItems(cartItems);
 
-        // 2. Load danh sách sản phẩm vào ComboBox
         ObservableList<Hai_Item> products = FXCollections.observableArrayList(orderService.getAvailableProducts());
         cbProducts.setItems(products);
-
-        // 3. (Optional) Làm đẹp hiển thị ComboBox (Chỉ hiện tên SP)
         cbProducts.setConverter(new StringConverter<Hai_Item>() {
-            @Override
-            public String toString(Hai_Item item) {
-                return (item != null) ? item.getName() + " (" + item.getPrice() + ")" : "";
-            }
-            @Override
-            public Hai_Item fromString(String string) { return null; }
+            @Override public String toString(Hai_Item item) { return (item != null) ? item.getName() + " - " + item.getPrice() : ""; }
+            @Override public Hai_Item fromString(String string) { return null; }
         });
+        
+        updateOrderDisplay();
     }
 
     @FXML
     public void handleAddToCart() {
         Hai_Item selectedItem = cbProducts.getValue();
-        if (selectedItem == null) {
-            showAlert("Lỗi", "Vui lòng chọn sản phẩm!");
-            return;
-        }
-
+        if (selectedItem == null) return;
         try {
             int qty = Integer.parseInt(txtQuantity.getText());
-            if (qty <= 0) throw new NumberFormatException();
-
-            // Tạo OrderItem mới
             Hieu_OrderItem line = new Hieu_OrderItem(selectedItem, qty);
             
-            // Thêm vào Object Order (Backend)
             currentOrder.addOrderItem(line);
-            
-            // Thêm vào bảng hiển thị (Frontend)
             cartItems.add(line);
             
-            // Tính lại tổng tiền
-            currentOrder.calculateTotal();
-            lblTotal.setText(currentOrder.getTotalAmount() + " VNĐ");
-
+            // Tính toán lại tiền nong
+            reCalculate();
+            
         } catch (NumberFormatException e) {
-            showAlert("Lỗi", "Số lượng phải là số nguyên dương!");
+            showAlert("Lỗi", "Số lượng sai!");
         }
+    }
+
+    @FXML
+    public void handleApplyCode() {
+        reCalculate(); // Tính lại kèm mã code
+        if (currentOrder.getDiscountAmount().doubleValue() > 0) {
+            showAlert("Thành công", "Đã áp dụng mã: " + currentOrder.getPromotionCode());
+        } else {
+            showAlert("Thông báo", "Mã không hợp lệ hoặc không tìm thấy!");
+        }
+    }
+
+    private void reCalculate() {
+        String code = txtPromoCode.getText().trim();
+        // Gọi Service tính toán tất cả (Thuế, Ship, Code)
+        orderService.calculateOrderDetails(currentOrder, code);
+        updateOrderDisplay();
+    }
+
+    private void updateOrderDisplay() {
+        lblSubTotal.setText(String.format("%,.0f", currentOrder.getSubTotal()));
+        lblTax.setText(String.format("%,.0f", currentOrder.getTaxAmount()));
+        lblShip.setText(String.format("%,.0f", currentOrder.getShippingFee()));
+        lblDiscount.setText(String.format("%,.0f", currentOrder.getDiscountAmount()));
+        lblGrandTotal.setText(String.format("%,.0f VNĐ", currentOrder.getTotalAmount()));
     }
 
     @FXML
     public void handleCheckout() {
         if (cartItems.isEmpty()) {
-            showAlert("Lỗi", "Giỏ hàng đang trống!");
+            showAlert("Lỗi", "Giỏ hàng trống!");
             return;
         }
-
         try {
-            // Lấy User mặc định để gán cho đơn hàng (Vì ta chưa truyền User từ Login sang đây kỹ)
-            // Tạm thời lấy User đầu tiên trong DB làm khách hàng cho nhanh
-            Dinh_User defaultCustomer = new UserService().login("vip_member", "pass123"); 
-            // Lưu ý: Nếu user này ko tồn tại thì sẽ lỗi, bạn hãy chắc chắn trong DB có user này hoặc sửa lại code hard-code username khác
-            
-            if(defaultCustomer == null) {
-                 // Fallback: Nếu null thì tạo đại 1 cái giả để không lỗi (Demo thôi)
-                 defaultCustomer = new Dinh_User("guest", "123", "ACTIVE");
-            }
+            // Lấy user demo (Thực tế phải lấy từ Session đăng nhập)
+            Dinh_User customer = new UserService().login("vip_member", "pass123");
+            if(customer == null) customer = new UserService().login("admin_dinh", "123456"); // Fallback
 
-            orderService.createOrder(currentOrder, defaultCustomer);
+            orderService.createOrder(currentOrder, customer);
             
-            showAlert("Thành công", "Đã tạo đơn hàng thành công! Mã đơn: " + currentOrder.getId());
+            showAlert("Thành công", "Đơn hàng đã tạo (Trạng thái: PLACED)\nTổng tiền: " + lblGrandTotal.getText());
             
-            // Reset lại form
+            // Reset
             currentOrder = new Hieu_Order();
             cartItems.clear();
-            lblTotal.setText("0 VNĐ");
+            txtPromoCode.clear();
+            updateOrderDisplay();
             
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Lỗi", "Không thể lưu đơn hàng: " + e.getMessage());
+            showAlert("Lỗi", "Lỗi lưu đơn hàng: " + e.getMessage());
         }
     }
 
