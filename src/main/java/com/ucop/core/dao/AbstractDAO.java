@@ -8,6 +8,8 @@ import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
 
+
+
 public abstract class AbstractDAO<T, ID extends Serializable> implements IGenericDAO<T, ID> {
     private Class<T> persistenceClass;
 
