@@ -69,40 +69,13 @@ public class PaymentController {
                 return;
             }
 
-         // Tính toán số tiền cuối cùng (Kèm Thuế, Ship logic xịn, Voucher)
-            public double calculateFinalAmount(Hieu_Order order, String voucherCode) throws Exception {
-                double subTotal = order.getTotalAmount().doubleValue();
-                double tax = subTotal * 0.1; // Thuế 10% VAT
-                
-                // --- LOGIC SHIP NÂNG CAO ---
-                double ship = 30000; // Mặc định 30k
-                if (subTotal >= 1000000) { 
-                    ship = 0; // Đơn to thì Free Ship
-                }
-                // ---------------------------
+            // 2. Tính toán chi tiết
+            double subTotal = order.getTotalAmount().doubleValue();
+            double tax = subTotal * 0.1;
+            double ship = 30000;
+            double total = service.calculateFinalAmount(order, voucher);
+            double discount = (subTotal + tax + ship) - total;
 
-                double discount = 0;
-
-                // Check Voucher của Quang
-                if (voucherCode != null && !voucherCode.isEmpty()) {
-                    List<Quang_Promotion> promos = promoDAO.findAll();
-                    for (Quang_Promotion p : promos) {
-                        if (p.getCode().equalsIgnoreCase(voucherCode)) {
-                            // Logic Voucher: Giảm theo số tiền (FIXED)
-                            // Nếu muốn giảm theo % thì check p.getDiscountType() == "PERCENT"
-                            if ("PERCENT".equalsIgnoreCase(p.getDiscountType())) {
-                                 discount = subTotal * (p.getDiscountValue() / 100);
-                            } else {
-                                 discount = p.getDiscountValue();
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                double finalAmount = subTotal + tax + ship - discount;
-                return finalAmount > 0 ? finalAmount : 0;
-            }
             // 3. Hiển thị thông tin
             String detail = String.format("Tiền hàng: %s\nThuế (10%%): %s\nShip: %s\nGiảm giá: -%s", 
                     df.format(subTotal), df.format(tax), df.format(ship), df.format(discount));
