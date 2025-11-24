@@ -9,6 +9,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import java.io.IOException;
 
+// [MỚI] Import Controller của Long (Payment)
+import com.ucop.long_payment.controller.PaymentController;
+
 public class DashboardController {
 
     @FXML 
@@ -17,8 +20,13 @@ public class DashboardController {
     @FXML 
     private BorderPane mainPane; 
 
+    // [MỚI] Biến để lưu username người dùng đang đăng nhập (để truyền sang các màn hình khác)
+    private String currentUsername;
+
     // Hàm nhận dữ liệu từ Login
     public void setUsername(String username) {
+        // [MỚI] Lưu lại username vào biến
+        this.currentUsername = username;
         lblWelcome.setText("Xin chào, " + username + "!");
     }
 
@@ -58,9 +66,26 @@ public class DashboardController {
         }
     }
 
+    // [ĐÃ CẬP NHẬT] Hàm mở chức năng Payment của Long
     @FXML
     public void showPayment() {
-        lblWelcome.setText("Đang mở chức năng Thanh toán (Của Long)...");
+        try {
+            // 1. Load giao diện từ file FXML của Long
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/PaymentView.fxml"));
+            Parent view = loader.load();
+
+            // 2. Lấy Controller của Long để truyền username sang
+            // (Để bên Payment biết là đang thao tác ví của ai)
+            PaymentController paymentCtrl = loader.getController();
+            paymentCtrl.setUsername(currentUsername);
+
+            // 3. Hiển thị lên màn hình chính
+            mainPane.setCenter(view);
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Nếu lỗi, hiện thông báo lên màn hình cho dễ debug
+            lblWelcome.setText("Lỗi: Không tìm thấy file PaymentView.fxml hoặc lỗi code Controller!");
+        }
     }
 
     @FXML
