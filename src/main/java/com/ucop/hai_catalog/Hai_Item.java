@@ -19,34 +19,47 @@ public class Hai_Item {
 
     private BigDecimal price; // Giá tiền
 
-    @Column(name = "stock_quantity")
-    private int stockQuantity; // Tồn kho
-
     private String unit; // Đơn vị tính
     private String status; // ACTIVE, DISCONTINUED
     
-    // --- CỘT MỚI: ĐƯỜNG DẪN ẢNH ---
     @Column(name = "image_path")
     private String imagePath;
 
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Hai_Category category;
+    
+    // [MỚI] Liên kết 2 chiều đến StockItem để biết tồn kho
+    // mappedBy = "item" nghĩa là phía StockItem đang nắm giữ khóa ngoại
+    @OneToOne(mappedBy = "item", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Hai_StockItem stockItem;
 
     public Hai_Item() {}
 
-    // Constructor cập nhật thêm imagePath
-    public Hai_Item(String sku, String name, double price, int stock, String unit, String imagePath) {
+    public Hai_Item(String sku, String name, double price, String unit, String imagePath) {
         this.sku = sku;
         this.name = name;
         this.price = BigDecimal.valueOf(price);
-        this.stockQuantity = stock;
         this.unit = unit;
         this.status = "ACTIVE";
         this.imagePath = imagePath;
     }
 
-    // Getters Setters
+    // --- LOGIC LẤY TỒN KHO ẢO ĐỂ HIỂN THỊ LÊN BẢNG ---
+    // (Giúp code cũ của ProductController không bị lỗi đỏ lòm khi gọi getStockQuantity)
+    public int getStockQuantity() {
+        if (stockItem != null) {
+            return stockItem.getOnHand(); // Trả về số lượng thực tế trong kho
+        }
+        return 0;
+    }
+    
+    // Hàm này chỉ để tương thích, thực tế nên setStockItem
+    public void setStockQuantity(int qty) {
+        // Không làm gì hoặc cập nhật vào stockItem nếu cần thiết
+    }
+
+    // Getters Setters cơ bản
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getSku() { return sku; }
@@ -55,8 +68,6 @@ public class Hai_Item {
     public void setName(String name) { this.name = name; }
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
-    public int getStockQuantity() { return stockQuantity; }
-    public void setStockQuantity(int stockQuantity) { this.stockQuantity = stockQuantity; }
     public String getUnit() { return unit; }
     public void setUnit(String unit) { this.unit = unit; }
     public String getStatus() { return status; }
@@ -66,7 +77,10 @@ public class Hai_Item {
     public Hai_Category getCategory() { return category; }
     public void setCategory(Hai_Category category) { this.category = category; }
     
-    // Hàm hỗ trợ hiển thị tên trong ComboBox (Module Bán hàng dùng)
+    // Getter Setter cho StockItem
+    public Hai_StockItem getStockItem() { return stockItem; }
+    public void setStockItem(Hai_StockItem stockItem) { this.stockItem = stockItem; }
+
     @Override
     public String toString() {
         return name + " (" + price + ")";

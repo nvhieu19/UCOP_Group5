@@ -34,6 +34,8 @@
             
             <Button fx:id="btnAudit" mnemonicParsing="false" onAction="#showAuditLog" prefWidth="200.0" text="🕒 Nhật ký Hoạt động" />
             
+            <Button mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
+            
             <Button fx:id="btnProduct" mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
             
             <Button fx:id="btnCart" mnemonicParsing="false" onAction="#showOrder" prefWidth="200.0" text="🛒 Giỏ hàng" />

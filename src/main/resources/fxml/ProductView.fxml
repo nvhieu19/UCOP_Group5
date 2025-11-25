@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
@@ -21,6 +22,9 @@
           <columns>
             <TableColumn text="SKU" prefWidth="80"><cellValueFactory><PropertyValueFactory property="sku" /></cellValueFactory></TableColumn>
             <TableColumn text="Tên Sản phẩm" prefWidth="200"><cellValueFactory><PropertyValueFactory property="name" /></cellValueFactory></TableColumn>
+            
+            <TableColumn fx:id="colCategory" text="Danh mục" prefWidth="120" />
+            
             <TableColumn text="Giá" prefWidth="100"><cellValueFactory><PropertyValueFactory property="price" /></cellValueFactory></TableColumn>
             <TableColumn text="Tồn" prefWidth="60"><cellValueFactory><PropertyValueFactory property="stockQuantity" /></cellValueFactory></TableColumn>
           </columns>
@@ -37,12 +41,25 @@
        
        <TextField fx:id="txtSku" promptText="Mã SKU (VD: IP15)" />
        <TextField fx:id="txtName" promptText="Tên sản phẩm" />
+       
+       <Label text="Danh mục sản phẩm:" />
+       <ComboBox fx:id="cbCategory" prefWidth="300.0" promptText="-- Chọn danh mục --" />
+       
        <TextField fx:id="txtPrice" promptText="Giá tiền" />
        <TextField fx:id="txtStock" promptText="Số lượng tồn kho" />
        
        <HBox spacing="10.0" alignment="CENTER">
-           <Button text="Thêm Mới" onAction="#handleAdd" style="-fx-background-color: #27ae60; -fx-text-fill: white;" prefWidth="100" />
-           <Button text="Xóa Chọn" onAction="#handleDelete" style="-fx-background-color: #c0392b; -fx-text-fill: white;" prefWidth="100" />
+           <Button text="Thêm Mới" onAction="#handleAdd" style="-fx-background-color: #27ae60; -fx-text-fill: white;" prefWidth="80" />
+           <Button text="Cập Nhật" onAction="#handleUpdate" style="-fx-background-color: #3498db; -fx-text-fill: white;" prefWidth="80" />
+           <Button text="Xóa Chọn" onAction="#handleDelete" style="-fx-background-color: #c0392b; -fx-text-fill: white;" prefWidth="80" />
+       </HBox>
+       
+       <Button text="Xóa Form" onAction="#handleClear" prefWidth="250.0" style="-fx-background-color: #bdc3c7; -fx-text-fill: #34495e; -fx-font-weight: bold;" />
+
+       <Label text="Tiện ích mở rộng (CSV):" textFill="#7f8c8d"><font><Font name="System Bold" size="12.0" /></font></Label>
+       <HBox spacing="10.0" alignment="CENTER">
+           <Button text="📤 Xuất Excel" onAction="#handleExport" style="-fx-background-color: #8e44ad; -fx-text-fill: white;" prefWidth="120" />
+           <Button text="📥 Nhập File" onAction="#handleImport" style="-fx-background-color: #d35400; -fx-text-fill: white;" prefWidth="120" />
        </HBox>
    </VBox>
 </HBox>

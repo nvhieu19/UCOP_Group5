@@ -21,14 +21,14 @@ public class DashboardController {
     @FXML private Label lblWelcome;
     @FXML private BorderPane mainPane; 
 
-    // --- KHAI BÁO CÁC NÚT TRÊN MENU ĐỂ ẨN/HIỆN ---
-    @FXML private Button btnUser;      // Nút Quản lý User
-    @FXML private Button btnAudit;     // [MỚI] Nút Audit Log
-    @FXML private Button btnProduct;   // Nút Kho & SP (Catalog)
-    @FXML private Button btnCart;      // Nút Giỏ hàng
-    @FXML private Button btnOrder;     // Nút Đơn hàng
-    @FXML private Button btnReport;    // Nút Báo cáo
-    @FXML private Button btnPayment;   // Nút Thanh toán
+    // --- KHAI BÁO CÁC NÚT ĐỂ PHÂN QUYỀN (Lấy từ Server) ---
+    @FXML private Button btnUser;      
+    @FXML private Button btnAudit;     
+    @FXML private Button btnProduct;   
+    @FXML private Button btnCart;      
+    @FXML private Button btnOrder;     
+    @FXML private Button btnReport;    
+    @FXML private Button btnPayment;   
 
     // --- HÀM KHỞI TẠO ---
     @FXML
@@ -37,6 +37,7 @@ public class DashboardController {
         
         if (currentUser != null) {
             lblWelcome.setText("Xin chào: " + currentUser.getUsername());
+            // Áp dụng phân quyền ngay khi mở Dashboard
             applyPermissions(currentUser);
         }
     }
@@ -50,28 +51,23 @@ public class DashboardController {
             role = roles.iterator().next().getRoleName(); 
         }
 
-        System.out.println("Current Role: " + role); 
-
         switch (role.toUpperCase()) {
             case "ADMIN":
-                // Admin thấy hết -> Không cần ẩn gì cả
-                break;
+                break; // Admin thấy hết
 
             case "STAFF":
-                // Staff chỉ làm Kho & SP, Xử lý đơn hàng
-                // -> Ẩn: Quản lý User, Audit, Báo cáo, Giỏ hàng, Thanh toán
+                // Staff ẩn: User, Audit, Báo cáo, Giỏ hàng, Thanh toán
                 hideButton(btnUser);
-                hideButton(btnAudit);   // [MỚI] Staff ko được xem Audit Log
+                hideButton(btnAudit);
                 hideButton(btnReport);
                 hideButton(btnCart);
                 hideButton(btnPayment);
                 break;
 
             case "CUSTOMER":
-                // Khách hàng chỉ thấy Giỏ hàng, Đơn hàng, Thanh toán
-                // -> Ẩn: Quản lý User, Audit, Kho, Báo cáo
+                // Khách ẩn: User, Audit, Kho, Báo cáo
                 hideButton(btnUser);
-                hideButton(btnAudit);   // [MỚI] Khách ko được xem Audit Log
+                hideButton(btnAudit);
                 hideButton(btnProduct);
                 hideButton(btnReport);
                 break;
@@ -84,7 +80,6 @@ public class DashboardController {
         }
     }
 
-    // Hàm phụ trợ để ẩn nút
     private void hideButton(Button btn) {
         if (btn != null) {
             btn.setVisible(false);
@@ -92,7 +87,6 @@ public class DashboardController {
         }
     }
 
-    // --- GIỮ NGUYÊN CÁC HÀM CŨ ---
     public void setUsername(String username) {
         if (lblWelcome != null) lblWelcome.setText("Xin chào: " + username);
     }
@@ -112,11 +106,19 @@ public class DashboardController {
         }
     }
 
-    // --- SỰ KIỆN MENU (Đã thêm showAuditLog) ---
+    // --- CÁC SỰ KIỆN MENU (Đã gộp của BẠN và NHÓM) ---
+
     @FXML public void showUserMgmt() { loadView("UserView.fxml"); }
     
-    @FXML public void showAuditLog() { loadView("AuditView.fxml"); } // [MỚI] Hàm mở trang Audit
+    // [MỚI] Nhật ký hoạt động (Của nhóm)
+    @FXML public void showAuditLog() { 
+         loadView("AuditView.fxml"); 
+        System.out.println("Chức năng Audit đang phát triển");
+    } 
     
+    // [QUAN TRỌNG] Quản lý Danh mục (Của BẠN - Giữ lại)
+    @FXML public void showCategory() { loadView("CategoryView.fxml"); }
+
     @FXML public void showCatalog() { loadView("ProductView.fxml"); }
     @FXML public void showOrder() { loadView("CartView.fxml"); }
     @FXML public void showPayment() { loadView("PaymentView.fxml"); }
@@ -126,11 +128,15 @@ public class DashboardController {
     @FXML
     public void handleLogout() {
         try {
-            SessionManager.getInstance().logout();
+            // Đăng xuất
+            SessionManager.getInstance().setCurrentUser(null); 
+            
+            // Chuyển về màn hình Login
             if (mainPane.getScene() != null) {
                 Stage stage = (Stage) mainPane.getScene().getWindow();
                 Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
                 stage.setScene(new Scene(root));
+                stage.setTitle("UCOP System - Login");
                 stage.centerOnScreen();
             }
         } catch (Exception e) {
