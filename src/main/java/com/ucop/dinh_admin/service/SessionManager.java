@@ -26,4 +26,18 @@ public class SessionManager {
     public void setCurrentUser(Dinh_User currentUser) {
         this.currentUser = currentUser;
     }
+ // Thêm hàm này để kiểm tra quyền nhanh (Phục vụ yêu cầu RBAC)
+    public boolean hasRole(String roleName) {
+        if (currentUser == null || currentUser.getRoles() == null) {
+            return false;
+        }
+        // Duyệt qua list roles của user xem có role cần tìm không
+        return currentUser.getRoles().stream()
+                .anyMatch(r -> r.getRoleName().equalsIgnoreCase(roleName));
+    }
+
+    // Hàm clear khi đăng xuất
+    public void logout() {
+        this.currentUser = null;
+    }
 }
