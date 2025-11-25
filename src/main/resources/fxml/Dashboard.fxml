@@ -31,6 +31,8 @@
             </Label>
             
             <Button mnemonicParsing="false" onAction="#showUserMgmt" prefWidth="200.0" text="👤 Quản lý Người dùng (Admin)" />
+            
+            <Button mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
             <Button mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
             <Button mnemonicParsing="false" onAction="#showOrder" prefWidth="200.0" text="🛒 Giỏ hàng" />
 			<Button mnemonicParsing="false" onAction="#showOrderList" prefWidth="200.0" text="📜 Danh sách Đơn hàng" />

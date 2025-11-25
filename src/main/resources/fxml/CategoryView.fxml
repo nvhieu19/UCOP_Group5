@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<HBox spacing="10.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.hai_catalog.controller.CategoryController">
+   <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
+   
+   <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+       <Label text="QUẢN LÝ DANH MỤC (CATEGORY)" textFill="#8e44ad"><font><Font name="System Bold" size="20.0" /></font></Label>
+       
+       <TableView fx:id="tableCategory" VBox.vgrow="ALWAYS">
+          <columns>
+            <TableColumn text="ID" prefWidth="50" />
+            <TableColumn text="Tên Danh mục" prefWidth="200" />
+            <TableColumn text="Mô tả" prefWidth="300" />
+            <TableColumn text="Danh mục Cha" prefWidth="150" />
+          </columns>
+       </TableView>
+   </VBox>
+
+   <VBox spacing="15.0" prefWidth="300.0" style="-fx-background-color: #f0f0f0; -fx-padding: 15; -fx-background-radius: 10;">
+       <Label text="Thao tác" textFill="#7f8c8d"><font><Font name="System Bold" size="14.0" /></font></Label>
+       
+       <Label text="Tên Danh mục:" />
+       <TextField fx:id="txtName" promptText="Nhập tên..." />
+       
+       <Label text="Mô tả:" />
+       <TextField fx:id="txtDescription" promptText="Mô tả ngắn..." />
+       
+       <Label text="Danh mục Cha:" />
+       <ComboBox fx:id="cbParent" promptText="-- Gốc --" prefWidth="300.0" />
+       
+       <VBox spacing="10.0" alignment="CENTER">
+           <Button fx:id="btnSave" text="Thêm Mới" onAction="#handleSave" style="-fx-background-color: #27ae60; -fx-text-fill: white;" prefWidth="250" />
+           <HBox spacing="10.0" alignment="CENTER">
+               <Button fx:id="btnDelete" text="Xóa" onAction="#handleDelete" style="-fx-background-color: #c0392b; -fx-text-fill: white;" prefWidth="120" />
+               <Button text="Xóa Form" onAction="#handleClear" style="-fx-background-color: #bdc3c7; -fx-text-fill: #34495e;" prefWidth="120" />
+           </HBox>
+       </VBox>
+   </VBox>
+</HBox>

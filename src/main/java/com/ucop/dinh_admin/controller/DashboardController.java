@@ -51,6 +51,12 @@ public class DashboardController {
     public void showCatalog() {
         loadView("ProductView.fxml");
     }
+    
+    // THÊM MỚI: Phương thức mở màn hình Quản lý Danh mục
+    @FXML
+    public void showCategory() {
+        loadView("CategoryView.fxml");
+    }
 
     @FXML
     public void showOrder() {
@@ -84,6 +90,7 @@ public class DashboardController {
             // Load lại màn hình Login
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
             stage.setScene(new Scene(root));
+            stage.setTitle("UCOP System - Login");
             stage.centerOnScreen();
             
         } catch (Exception e) {
@@ -94,4 +101,4 @@ public class DashboardController {
     public void showOrderList() {
         loadView("OrderListView.fxml");
     }
-} 
+}
