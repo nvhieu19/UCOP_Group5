@@ -3,7 +3,9 @@ package com.ucop.long_payment.service;
 import com.ucop.core.dao.AbstractDAO;
 import com.ucop.dinh_admin.Dinh_User;
 import com.ucop.hieu_order.Hieu_Order;
+import com.ucop.hieu_order.Hieu_Shipment;
 import com.ucop.hieu_order.dao.OrderDAO;
+import com.ucop.hieu_order.service.ShipmentService;
 import com.ucop.long_payment.Long_Payment;
 import com.ucop.long_payment.Long_Wallet;
 import com.ucop.long_payment.dao.PaymentDAO;
@@ -17,6 +19,7 @@ public class PaymentService {
     private WalletDAO walletDAO = new WalletDAO();
     private PaymentDAO paymentDAO = new PaymentDAO();
     private OrderDAO orderDAO = new OrderDAO();
+    private ShipmentService shipmentService = new ShipmentService();
     
     // Dùng AbstractDAO để lấy Promotion của Quang nhanh gọn
     private AbstractDAO<Quang_Promotion, Long> promoDAO = new AbstractDAO<Quang_Promotion, Long>() {};
@@ -71,8 +74,9 @@ public class PaymentService {
 
     // Tính tổng tiền cuối cùng (Có Voucher + Phí Ship cụ thể)
     public double calculateFinalAmount(Hieu_Order order, String voucherCode, double shippingFee) {
-        double subTotal = order.getTotalAmount().doubleValue();
-        double tax = subTotal * 0.1; // Thuế 10%
+        // FIX: Lấy đúng các thành phần tiền, không tính lại thuế
+        double subTotal = order.getSubTotal().doubleValue();
+        double tax = order.getTaxAmount().doubleValue(); // Lấy thuế đã tính, không tính lại
         double discount = 0;
 
         // Check Voucher của Quang
@@ -99,15 +103,15 @@ public class PaymentService {
         return calculateFinalAmount(order, voucherCode, 30000);
     }
 
-    // [QUAN TRỌNG] Thực hiện thanh toán BẰNG VÍ (Trừ tiền thật)
-    public void payOrder(String username, Long orderId, String voucherCode, double shippingFee) throws Exception {
+    // [QUAN TRỌNG] Thực hiện thanh toán BẰNG VÍ (Trừ tiền thật) - CÓ ĐỊA CHỈ
+    public void payOrder(String username, Long orderId, String voucherCode, double shippingFee, String address) throws Exception {
         Long_Wallet wallet = getWallet(username);
         Hieu_Order order = findPendingOrder(username, orderId);
 
         if (order == null) throw new Exception("Không tìm thấy đơn hàng hoặc đơn đã thanh toán!");
 
-        // Tính tiền cần trừ
-        double finalAmount = calculateFinalAmount(order, voucherCode, shippingFee);
+        // FIX: Lấy tổng tiền đã tính đúng từ Order (không tính lại)
+        double finalAmount = order.getTotalAmount().doubleValue();
 
         // Kiểm tra số dư
         if (wallet.getBalance().doubleValue() < finalAmount) {
@@ -118,13 +122,34 @@ public class PaymentService {
         wallet.setBalance(wallet.getBalance().subtract(BigDecimal.valueOf(finalAmount)));
         walletDAO.update(wallet);
 
-        // 2. Cập nhật trạng thái đơn hàng -> SHIPPED
-        order.setStatus("SHIPPED");
+        // 2. Cập nhật trạng thái đơn hàng -> PAID
+        order.setStatus("PAID");
         orderDAO.update(order);
 
         // 3. Lưu lịch sử giao dịch
         Long_Payment payment = new Long_Payment(order, "WALLET_QR", BigDecimal.valueOf(finalAmount));
         paymentDAO.save(payment);
+        
+        // 4. [MỚI] TỰ ĐỘNG TẠO VẬN CHUYỂN SAU KHI THANH TOÁN
+        try {
+            Dinh_User staff = findAdminStaff();
+            String deliveryAddress = (address != null && !address.trim().isEmpty()) ? address : "Địa chỉ chưa xác định";
+            Hieu_Shipment shipment = shipmentService.createShipment(
+                order.getId(), 
+                "Standard", 
+                deliveryAddress, 
+                staff
+            );
+            System.out.println("✅ Đã tạo vận chuyển tự động: " + shipment.getTrackingNumber());
+        } catch (Exception e) {
+            System.err.println("⚠️ Lỗi khi tạo vận chuyển tự động: " + e.getMessage());
+            // Không ném exception, vì thanh toán đã thành công
+        }
+    }
+    
+    // Hàm overload để tương thích code cũ (không có địa chỉ)
+    public void payOrder(String username, Long orderId, String voucherCode, double shippingFee) throws Exception {
+        payOrder(username, orderId, voucherCode, shippingFee, null);
     }
 
     // Hàm overload để tương thích code cũ
@@ -132,21 +157,42 @@ public class PaymentService {
         payOrder(username, orderId, voucherCode, 30000);
     }
 
-    // --- [MỚI] Xử lý thanh toán qua NGÂN HÀNG (Quét QR) ---
+    // --- [MỚI] Xử lý thanh toán qua NGÂN HÀNG (Quét QR) - CÓ ĐỊA CHỈ ---
     // Không trừ ví, chỉ xác nhận đơn
-    public void payByBankTransfer(String username, Long orderId, double amount) throws Exception {
+    public void payByBankTransfer(String username, Long orderId, double amount, String address) throws Exception {
         Hieu_Order order = findPendingOrder(username, orderId);
         if (order == null) throw new Exception("Đơn hàng không hợp lệ hoặc đã thanh toán!");
 
         // 1. Không trừ ví (Vì khách chuyển khoản từ ngoài vào)
         
-        // 2. Cập nhật trạng thái -> SHIPPED
-        order.setStatus("SHIPPED");
+        // 2. Cập nhật trạng thái -> PAID (FIX: thay SHIPPED thành PAID)
+        order.setStatus("PAID");
         orderDAO.update(order);
 
         // 3. Lưu lịch sử (Loại: BANK_TRANSFER)
         Long_Payment payment = new Long_Payment(order, "BANK_TRANSFER", BigDecimal.valueOf(amount));
         paymentDAO.save(payment);
+        
+        // 4. [MỚI] TỰ ĐỘNG TẠO VẬN CHUYỂN SAU KHI THANH TOÁN
+        try {
+            Dinh_User staff = findAdminStaff();
+            String deliveryAddress = (address != null && !address.trim().isEmpty()) ? address : "Địa chỉ chưa xác định";
+            Hieu_Shipment shipment = shipmentService.createShipment(
+                order.getId(), 
+                "Express", 
+                deliveryAddress, 
+                staff
+            );
+            System.out.println("✅ Đã tạo vận chuyển tự động: " + shipment.getTrackingNumber());
+        } catch (Exception e) {
+            System.err.println("⚠️ Lỗi khi tạo vận chuyển tự động: " + e.getMessage());
+            // Không ném exception, vì thanh toán đã thành công
+        }
+    }
+    
+    // Hàm overload để tương thích code cũ (không có địa chỉ)
+    public void payByBankTransfer(String username, Long orderId, double amount) throws Exception {
+        payByBankTransfer(username, orderId, amount, null);
     }
 
     // --- CHỨC NĂNG HOÀN TIỀN (REFUND) ---
@@ -155,7 +201,7 @@ public class PaymentService {
         
         if (order == null) throw new Exception("Không tìm thấy đơn hàng ID: " + orderId);
         
-        // Cho phép hoàn tiền cả đơn SHIPPED
+        // Cho phép hoàn tiền cả đơn PAID và SHIPPED
         if (!"PAID".equals(order.getStatus()) && !"SHIPPED".equals(order.getStatus())) {
             throw new Exception("Đơn hàng này chưa thanh toán, không thể hoàn tiền!");
         }
@@ -163,7 +209,8 @@ public class PaymentService {
         String customerName = order.getCustomer().getUsername();
         Long_Wallet customerWallet = getWallet(customerName);
 
-        BigDecimal refundAmount = order.getTotalAmount(); 
+        // FIX: Hoàn tiền hàng + thuế, không hoàn phí ship
+        BigDecimal refundAmount = order.getSubTotal().add(order.getTaxAmount());
 
         customerWallet.deposit(refundAmount);
         walletDAO.update(customerWallet);
@@ -179,5 +226,23 @@ public class PaymentService {
         return new AbstractDAO<Dinh_User, Long>(){}.findAll().stream()
                 .filter(u -> u.getUsername().equals(username))
                 .findFirst().orElse(null);
+    }
+    
+    // [MỚI] Tìm nhân viên admin để gán vào vận chuyển
+    private Dinh_User findAdminStaff() {
+        try {
+            List<Dinh_User> allUsers = new AbstractDAO<Dinh_User, Long>(){}.findAll();
+            // Tìm user có id = 1 hoặc tìm user đầu tiên
+            for (Dinh_User user : allUsers) {
+                if (user.getId() == 1) {
+                    return user;
+                }
+            }
+            // Nếu không tìm thấy id=1, trả về user đầu tiên
+            return allUsers.isEmpty() ? null : allUsers.get(0);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tìm admin staff: " + e.getMessage());
+            return null;
+        }
     }
 }

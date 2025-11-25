@@ -34,7 +34,7 @@
             
             <Button fx:id="btnAudit" mnemonicParsing="false" onAction="#showAuditLog" prefWidth="200.0" text="🕒 Nhật ký Hoạt động" />
             
-            <Button mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
+            <Button fx:id="btnCategory" mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
             
             <Button fx:id="btnProduct" mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
             
@@ -45,6 +45,10 @@
             <Button fx:id="btnPayment" mnemonicParsing="false" onAction="#showPayment" prefWidth="200.0" text="💳 Thanh toán &amp; Ví" />
             
             <Button fx:id="btnReport" mnemonicParsing="false" onAction="#showReport" prefWidth="200.0" text="📊 Báo cáo &amp; Thống kê" />
+            
+            <Button fx:id="btnShipment" mnemonicParsing="false" onAction="#showShipment" prefWidth="200.0" style="-fx-background-color: #27ae60; -fx-text-fill: white;" text="🚚 Quản lý Vận chuyển" />
+            
+            <Button mnemonicParsing="false" onAction="#handleChangePassword" prefWidth="200.0" style="-fx-background-color: #9b59b6; -fx-text-fill: white;" text="🔐 Đổi mật khẩu" />
             
             <Button mnemonicParsing="false" onAction="#handleLogout" prefWidth="200.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" text="Đăng xuất" />
          </children>

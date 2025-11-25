@@ -123,10 +123,21 @@ public class ProductController {
     @FXML
     public void handleAdd() {
         try {
-            String sku = txtSku.getText();
-            String name = txtName.getText();
+            String sku = txtSku.getText().trim();
+            String name = txtName.getText().trim();
             double price = Double.parseDouble(txtPrice.getText());
             int stock = Integer.parseInt(txtStock.getText());
+            
+            // FIX: Validate input
+            if (sku.isEmpty() || name.isEmpty()) {
+                showAlert("Lỗi", "SKU và Tên sản phẩm không được để trống!");
+                return;
+            }
+            
+            if (price < 0 || stock < 0) {
+                showAlert("Lỗi", "Giá và Tồn kho không được âm!");
+                return;
+            }
             
             Hai_Category selectedCat = cbCategory.getValue();
             if (selectedCat == null) {
@@ -158,25 +169,39 @@ public class ProductController {
             return;
         }
         try {
+            String sku = txtSku.getText().trim();
+            String name = txtName.getText().trim();
+            double price = Double.parseDouble(txtPrice.getText());
+            int stock = Integer.parseInt(txtStock.getText());
+            
+            // FIX: Validate input
+            if (sku.isEmpty() || name.isEmpty()) {
+                showAlert("Lỗi", "SKU và Tên sản phẩm không được để trống!");
+                return;
+            }
+            
+            if (price < 0 || stock < 0) {
+                showAlert("Lỗi", "Giá và Tồn kho không được âm!");
+                return;
+            }
+            
             Hai_Category selectedCat = cbCategory.getValue();
             if (selectedCat == null) {
                 showAlert("Lỗi", "Vui lòng chọn Danh mục!");
                 return;
             }
 
-            String sku = txtSku.getText();
-            String name = txtName.getText();
-            double price = Double.parseDouble(txtPrice.getText());
-            int stock = Integer.parseInt(txtStock.getText());
-            
             selectedItem.setSku(sku);
             selectedItem.setName(name);
             selectedItem.setPrice(BigDecimal.valueOf(price));
             selectedItem.setCategory(selectedCat);
             selectedItem.setImagePath(currentImagePath);
             
+            // FIX: Kiểm tra null trước khi update stock
             if (selectedItem.getStockItem() != null) {
                 selectedItem.getStockItem().setOnHand(stock);
+            } else {
+                System.out.println("⚠️ Warning: StockItem is null for product: " + selectedItem.getSku());
             }
             
             service.updateItem(selectedItem);
@@ -184,6 +209,8 @@ public class ProductController {
             clearFields();
             showAlert("Thành công", "Đã cập nhật sản phẩm!");
             
+        } catch (NumberFormatException e) {
+            showAlert("Lỗi nhập liệu", "Giá và Tồn kho phải là số!");
         } catch (Exception e) {
             e.printStackTrace();
             showAlert("Lỗi", "Không thể cập nhật: " + e.getMessage());

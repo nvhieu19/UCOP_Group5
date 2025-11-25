@@ -28,9 +28,7 @@
           
           <TableColumn fx:id="colStatus" text="Trạng thái" prefWidth="100" />
           
-          <TableColumn text="Ngày tạo" prefWidth="150">
-              <cellValueFactory><javafx.scene.control.cell.PropertyValueFactory property="createdAt"/></cellValueFactory>
-          </TableColumn>
+          <TableColumn fx:id="colCreatedAt" text="Ngày tạo" prefWidth="150" />
         </columns>
       </TableView>
 

@@ -13,5 +13,11 @@
         <property name="format_sql">true</property>
         <property name="hbm2ddl.auto">update</property>
         
-        </session-factory>
+        <!-- KHAI BÁO ENTITY ĐỂ HIBERNATE NHẬN DIỆN -->
+        <mapping class="com.ucop.dinh_admin.Dinh_User"/>
+        <mapping class="com.ucop.hieu_order.Hieu_Order"/>
+        <mapping class="com.ucop.hieu_order.Hieu_OrderItem"/>
+        <mapping class="com.ucop.hieu_order.Hieu_Shipment"/>
+        
+    </session-factory>
 </hibernate-configuration>

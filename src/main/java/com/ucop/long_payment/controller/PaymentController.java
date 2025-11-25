@@ -17,6 +17,8 @@ import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -43,10 +45,36 @@ public class PaymentController {
             return;
         }
         setupOrderComboBox();
+        setupPaymentHistoryTable();
         loadData();
     }
 
-    // Không cần hàm setUsername nữa vì đã lấy từ Session
+    // ...existing code...
+
+    private void setupPaymentHistoryTable() {
+        // Format ngày giờ chuẩn cho bảng lịch sử thanh toán
+        if (tableHistory != null && tableHistory.getColumns().size() > 0) {
+            // Tìm và format cột ngày (thường là cột thứ 2 hoặc 3 tùy theo FXML)
+            for (int i = 0; i < tableHistory.getColumns().size(); i++) {
+                TableColumn<Long_Payment, ?> col = tableHistory.getColumns().get(i);
+                if (col.getText().contains("Ngày") || col.getText().contains("Thời gian") || col.getText().contains("Lúc")) {
+                    @SuppressWarnings("unchecked")
+                    TableColumn<Long_Payment, LocalDateTime> dateCol = (TableColumn<Long_Payment, LocalDateTime>) col;
+                    dateCol.setCellFactory(column -> new TableCell<Long_Payment, LocalDateTime>() {
+                        @Override
+                        protected void updateItem(LocalDateTime item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (empty || item == null) {
+                                setText(null);
+                            } else {
+                                setText(item.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
     
     private void loadData() {
         if (currentUser == null) return;
@@ -64,7 +92,7 @@ public class PaymentController {
 
     private void loadUnpaidOrders() {
         List<Hieu_Order> list = orderDAO.findAll().stream()
-                .filter(o -> o.getCustomer().getUsername().equals(currentUser.getUsername()))
+                .filter(o -> o.getCustomer() != null && o.getCustomer().getUsername().equals(currentUser.getUsername()))
                 .filter(o -> !"PAID".equals(o.getStatus()) && !"SHIPPED".equals(o.getStatus()) && !"COD_PENDING".equals(o.getStatus()))
                 .collect(Collectors.toList());
         cbOrdersToPay.setItems(FXCollections.observableArrayList(list));
@@ -90,10 +118,20 @@ public class PaymentController {
     public void handleDeposit() {
         try {
             double amount = Double.parseDouble(txtDeposit.getText());
+            
+            // FIX: Validate số tiền phải dương
+            if (amount <= 0) {
+                showError("Lỗi", "Số tiền phải lớn hơn 0!");
+                return;
+            }
+            
             service.deposit(currentUser.getUsername(), amount);
-            txtDeposit.clear(); loadData();
-            showInfo("Thành công", "Nạp tiền thành công!");
-        } catch (Exception e) { showError("Lỗi", "Số tiền không hợp lệ!"); }
+            txtDeposit.clear(); 
+            loadData();
+            showInfo("Thành công", "Nạp tiền thành công: " + String.format("%,d VNĐ", (long)amount));
+        } catch (NumberFormatException e) { 
+            showError("Lỗi", "Số tiền không hợp lệ!"); 
+        }
     }
 
     // --- 1. THANH TOÁN BẰNG VÍ (Nhanh) ---
@@ -105,12 +143,19 @@ public class PaymentController {
             return;
         }
 
+        // FIX: Kiểm tra xem đơn đã thanh toán hay chưa
+        if ("PAID".equals(selectedOrder.getStatus()) || "SHIPPED".equals(selectedOrder.getStatus())) {
+            showError("Lỗi", "Đơn hàng này đã thanh toán rồi!");
+            return;
+        }
+
         String address = showAddressDialog();
         if (address == null) return;
 
         try {
-            double shipFee = 30000;
-            service.payOrder(currentUser.getUsername(), selectedOrder.getId(), "", shipFee);
+            // Lấy phí ship đã tính sẵn từ order
+            double shipFee = selectedOrder.getShippingFee().doubleValue();
+            service.payOrder(currentUser.getUsername(), selectedOrder.getId(), "", shipFee, address);
             
             showInfo("Thành công", "Đã trừ tiền ví! Đơn hàng đang được giao đến: " + address);
             loadData(); 
@@ -128,18 +173,23 @@ public class PaymentController {
             return;
         }
 
+        // FIX: Kiểm tra xem đơn đã thanh toán hay chưa
+        if ("PAID".equals(selectedOrder.getStatus()) || "SHIPPED".equals(selectedOrder.getStatus())) {
+            showError("Lỗi", "Đơn hàng này đã thanh toán rồi!");
+            return;
+        }
+
         String address = showAddressDialog();
         if (address == null) return;
 
         try {
-            double shipFee = 30000;
-            double finalTotal = service.calculateFinalAmount(selectedOrder, "", shipFee);
+            double finalTotal = selectedOrder.getTotalAmount().doubleValue();
             String shipMethod = "Giao Tiêu Chuẩn";
 
-            boolean confirm = showQRConfirmDialog(selectedOrder.getId(), finalTotal, shipMethod, shipFee, address);
+            boolean confirm = showQRConfirmDialog(selectedOrder.getId(), finalTotal, shipMethod, selectedOrder.getShippingFee().doubleValue(), address);
             
             if (confirm) {
-                service.payByBankTransfer(currentUser.getUsername(), selectedOrder.getId(), finalTotal);
+                service.payByBankTransfer(currentUser.getUsername(), selectedOrder.getId(), finalTotal, address);
                 showInfo("Thành công", "Đã xác nhận chuyển khoản! Đơn hàng đang được giao.");
                 loadData();
             }
@@ -154,6 +204,12 @@ public class PaymentController {
         Hieu_Order selectedOrder = cbOrdersToPay.getValue();
         if (selectedOrder == null) {
             showError("Lỗi", "Vui lòng chọn đơn hàng!");
+            return;
+        }
+        
+        // FIX: Kiểm tra xem đơn đã thanh toán hay chưa
+        if ("PAID".equals(selectedOrder.getStatus()) || "SHIPPED".equals(selectedOrder.getStatus())) {
+            showError("Lỗi", "Đơn hàng này đã thanh toán rồi!");
             return;
         }
         

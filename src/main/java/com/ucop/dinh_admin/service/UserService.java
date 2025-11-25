@@ -53,8 +53,26 @@ public class UserService {
         recordAudit("UPDATE", performedBy, "users", "Updated user info: " + user.getUsername());
     }
 
+    // 5. Chức năng Đổi mật khẩu (Change Password)
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        Dinh_User user = userDAO.findByUsernameAndPassword(username, oldPassword);
+        
+        if (user == null) {
+            return false; // Mật khẩu cũ sai
+        }
+        
+        // Cập nhật mật khẩu mới
+        user.setPassword(newPassword);
+        userDAO.update(user);
+        
+        // Ghi audit log
+        recordAudit("CHANGE_PASSWORD", username, "users", "User changed password");
+        
+        return true;
+    }
+
     // --- Hàm phụ trợ: Ghi Audit Log ---
-    private void recordAudit(String action, String who, String table, String desc) {
+    public void recordAudit(String action, String who, String table, String desc) {
         try {
             Dinh_AuditLog log = new Dinh_AuditLog(action, who, table, desc);
             auditDAO.save(log);

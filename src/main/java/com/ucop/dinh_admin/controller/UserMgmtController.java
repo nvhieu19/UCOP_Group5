@@ -10,6 +10,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory; // Import thêm cái này để map cột
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class UserMgmtController {
@@ -20,6 +22,7 @@ public class UserMgmtController {
     @FXML private TableColumn<Dinh_User, String> colUsername;
     @FXML private TableColumn<Dinh_User, String> colStatus;
     @FXML private TableColumn<Dinh_User, String> colRole; // Cột hiển thị Role
+    @FXML private TableColumn<Dinh_User, LocalDateTime> colCreatedAt; // FIX: Thêm cột ngày tạo
 
     @FXML private TextField txtUser;
     @FXML private PasswordField txtPass;
@@ -45,7 +48,31 @@ public class UserMgmtController {
     private void setupTableColumns() {
         if(colId != null) colId.setCellValueFactory(new PropertyValueFactory<>("id"));
         if(colUsername != null) colUsername.setCellValueFactory(new PropertyValueFactory<>("username"));
-        if(colStatus != null) colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+        
+        // FIX: Format status đẹp hơn
+        if(colStatus != null) {
+            colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+            colStatus.setCellFactory(column -> new TableCell<Dinh_User, String>() {
+                @Override
+                protected void updateItem(String status, boolean empty) {
+                    super.updateItem(status, empty);
+                    if (empty || status == null) {
+                        setText(null);
+                    } else {
+                        if ("ACTIVE".equals(status)) {
+                            setText("✅ Hoạt động");
+                            setStyle("-fx-text-fill: #27ae60;");
+                        } else if ("LOCKED".equals(status)) {
+                            setText("🔒 Bị khóa");
+                            setStyle("-fx-text-fill: #e74c3c;");
+                        } else {
+                            setText(status);
+                            setStyle("");
+                        }
+                    }
+                }
+            });
+        }
         
         // Hiển thị Role (Hơi phức tạp vì nó là List, lấy cái đầu tiên đại diện)
         if(colRole != null) {
@@ -66,6 +93,22 @@ public class UserMgmtController {
                 }
             });
         }
+        
+        // FIX: Format cột Ngày tạo theo chuẩn dd/MM/yyyy HH:mm:ss
+        if(colCreatedAt != null) {
+            colCreatedAt.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
+            colCreatedAt.setCellFactory(column -> new TableCell<Dinh_User, LocalDateTime>() {
+                @Override
+                protected void updateItem(LocalDateTime dateTime, boolean empty) {
+                    super.updateItem(dateTime, empty);
+                    if (empty || dateTime == null) {
+                        setText(null);
+                    } else {
+                        setText(dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+                    }
+                }
+            });
+        }
     }
 
     private void loadData() {
@@ -76,6 +119,13 @@ public class UserMgmtController {
     @FXML
     public void handleAddUser() {
         try {
+            // FIX: Kiểm tra quyền admin trước khi thêm user
+            Dinh_User current = SessionManager.getInstance().getCurrentUser();
+            if (!hasAdminRole(current)) {
+                showAlert("Lỗi", "Chỉ Admin mới được thêm user!");
+                return;
+            }
+
             String u = txtUser.getText();
             String p = txtPass.getText();
             String roleName = cbRole.getValue();
@@ -97,7 +147,7 @@ public class UserMgmtController {
             }
             
             // Lấy tên Admin đang đăng nhập để ghi Log
-            String currentAdmin = SessionManager.getInstance().getCurrentUser().getUsername();
+            String currentAdmin = current.getUsername();
 
             // GỌI SERVICE (Tự động ghi Audit Log)
             boolean success = userService.register(newUser, currentAdmin);
@@ -115,11 +165,24 @@ public class UserMgmtController {
             showAlert("Lỗi", "Lỗi hệ thống: " + e.getMessage());
         }
     }
+    
+    private boolean hasAdminRole(Dinh_User user) {
+        if (user == null || user.getRoles() == null) return false;
+        return user.getRoles().stream()
+                .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getRoleName()));
+    }
 
     @FXML
     public void handleToggleStatus() {
         Dinh_User selected = tableUsers.getSelectionModel().getSelectedItem();
         if (selected != null) {
+            // FIX: Kiểm tra quyền admin
+            Dinh_User current = SessionManager.getInstance().getCurrentUser();
+            if (!hasAdminRole(current)) {
+                showAlert("Lỗi", "Chỉ Admin mới được thay đổi trạng thái user!");
+                return;
+            }
+
             if ("ACTIVE".equals(selected.getStatus())) {
                 selected.setStatus("LOCKED");
             } else {
@@ -127,7 +190,7 @@ public class UserMgmtController {
             }
 
             // Lấy tên Admin đang thao tác
-            String currentAdmin = SessionManager.getInstance().getCurrentUser().getUsername();
+            String currentAdmin = current.getUsername();
 
             // GỌI SERVICE (Tự động ghi Audit Log: UPDATE)
             userService.updateUser(selected, currentAdmin);
@@ -139,10 +202,40 @@ public class UserMgmtController {
         }
     }
     
-    // Hàm xóa giữ nguyên hoặc chuyển sang Service nếu muốn log hành động Delete
+    // Hàm xóa user
     @FXML
     public void handleDelete() {
-         // ... (Giữ nguyên hoặc update tương tự)
+        Dinh_User selected = tableUsers.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            // FIX: Kiểm tra quyền admin
+            Dinh_User current = SessionManager.getInstance().getCurrentUser();
+            if (!hasAdminRole(current)) {
+                showAlert("Lỗi", "Chỉ Admin mới được xóa user!");
+                return;
+            }
+
+            // Kiểm tra không được xóa chính mình
+            if (selected.getId().equals(current.getId())) {
+                showAlert("Lỗi", "Không thể xóa tài khoản của chính mình!");
+                return;
+            }
+
+            try {
+                // Xóa user
+                new com.ucop.dinh_admin.dao.UserDAO().delete(selected.getId());
+                
+                // Ghi audit log
+                userService.recordAudit("DELETE", current.getUsername(), "users", "Deleted user: " + selected.getUsername());
+                
+                loadData();
+                showAlert("Thành công", "Đã xóa user: " + selected.getUsername());
+            } catch (Exception e) {
+                e.printStackTrace();
+                showAlert("Lỗi", "Không thể xóa user: " + e.getMessage());
+            }
+        } else {
+            showAlert("Cảnh báo", "Vui lòng chọn user để xóa!");
+        }
     }
 
     private void showAlert(String title, String content) {

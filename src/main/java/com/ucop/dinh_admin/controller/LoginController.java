@@ -25,6 +25,25 @@ public class LoginController {
     private UserService userService = new UserService();
 
     @FXML
+    public void initialize() {
+        // FIX: Cho phép bấm Enter ở TextField để đăng nhập
+        if (txtPass != null) {
+            txtPass.setOnKeyPressed(event -> {
+                if (event.getCode().toString().equals("ENTER")) {
+                    handleLogin();
+                }
+            });
+        }
+        if (txtUser != null) {
+            txtUser.setOnKeyPressed(event -> {
+                if (event.getCode().toString().equals("ENTER")) {
+                    handleLogin();
+                }
+            });
+        }
+    }
+
+    @FXML
     public void handleLogin() {
         String u = txtUser.getText();
         String p = txtPass.getText();

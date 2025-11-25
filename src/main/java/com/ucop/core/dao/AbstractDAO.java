@@ -15,7 +15,16 @@ public abstract class AbstractDAO<T, ID extends Serializable> implements IGeneri
 
     @SuppressWarnings("unchecked")
     public AbstractDAO() {
-        this.persistenceClass = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        try {
+            ParameterizedType pt = (ParameterizedType) getClass().getGenericSuperclass();
+            if (pt != null && pt.getActualTypeArguments().length > 0) {
+                this.persistenceClass = (Class<T>) pt.getActualTypeArguments()[0];
+            } else {
+                throw new RuntimeException("Could not extract generic type argument from " + getClass().getName());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize AbstractDAO for " + getClass().getName(), e);
+        }
     }
 
     protected Session getSession() {
@@ -87,8 +96,19 @@ public abstract class AbstractDAO<T, ID extends Serializable> implements IGeneri
     @Override
     public List<T> findAll() {
         try (Session session = getSession()) {
-            Query<T> query = session.createQuery("FROM " + persistenceClass.getName(), persistenceClass);
-            return query.list();
+            if (persistenceClass == null) {
+                throw new RuntimeException("persistenceClass is null. Failed to determine entity type for " + getClass().getName());
+            }
+            String hql = "FROM " + persistenceClass.getSimpleName();
+            @SuppressWarnings("unchecked")
+            Query<T> query = session.createQuery(hql);
+            List<T> result = query.list();
+            System.out.println("findAll() returned " + (result != null ? result.size() : 0) + " items from " + persistenceClass.getSimpleName());
+            return result;
+        } catch (Exception e) {
+            System.err.println("Error in findAll() for " + (persistenceClass != null ? persistenceClass.getName() : "unknown class"));
+            e.printStackTrace();
+            return new java.util.ArrayList<>();
         }
     }
 }

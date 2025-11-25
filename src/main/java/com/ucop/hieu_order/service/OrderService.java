@@ -36,9 +36,16 @@ public class OrderService {
     public void calculateOrderDetails(Hieu_Order order, String promoCodeInput) {
         // 1. Tính SubTotal
         BigDecimal subTotal = BigDecimal.ZERO;
-        for (Hieu_OrderItem item : order.getOrderItems()) {
-            BigDecimal lineTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-            subTotal = subTotal.add(lineTotal);
+        int totalItems = 0;
+        
+        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+            for (Hieu_OrderItem item : order.getOrderItems()) {
+                if (item != null && item.getPrice() != null) {
+                    BigDecimal lineTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                    subTotal = subTotal.add(lineTotal);
+                    totalItems += item.getQuantity();
+                }
+            }
         }
         order.setSubTotal(subTotal);
 
@@ -46,14 +53,19 @@ public class OrderService {
         BigDecimal tax = subTotal.multiply(BigDecimal.valueOf(0.10));
         order.setTaxAmount(tax);
 
-        // 3. Tính Ship (Đơn > 1 triệu Free ship, dưới 1 triệu ship 30k)
-        BigDecimal ship = (subTotal.compareTo(BigDecimal.valueOf(1000000)) >= 0) 
-                          ? BigDecimal.ZERO 
-                          : BigDecimal.valueOf(30000);
+        // 3. Tính Ship (Luôn tính 30,000 đ nếu có sản phẩm, trừ khi giỏ trống)
+        BigDecimal ship = BigDecimal.ZERO;
+        if (totalItems > 0) {
+            // Có sản phẩm trong giỏ -> luôn tính phí ship 30,000 đ
+            ship = BigDecimal.valueOf(30000);
+        }
         order.setShippingFee(ship);
+        
+        System.out.println("[DEBUG] SubTotal: " + subTotal + ", Items: " + totalItems + ", Ship: " + ship);
 
         // 4. Tính Giảm giá
         BigDecimal discount = BigDecimal.ZERO;
+        order.setPromotionCode(null); // Reset mã promo trước
         if (promoCodeInput != null && !promoCodeInput.trim().isEmpty()) {
             List<Quang_Promotion> promos = promoDAO.findAll();
             for (Quang_Promotion p : promos) {

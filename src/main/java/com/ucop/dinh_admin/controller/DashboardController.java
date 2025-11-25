@@ -10,11 +10,18 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Alert;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
+import javafx.geometry.Insets;
 import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Set;
+import java.util.Optional;
 
 public class DashboardController {
 
@@ -24,11 +31,13 @@ public class DashboardController {
     // --- KHAI BÁO CÁC NÚT ĐỂ PHÂN QUYỀN (Lấy từ Server) ---
     @FXML private Button btnUser;      
     @FXML private Button btnAudit;     
+    @FXML private Button btnCategory;
     @FXML private Button btnProduct;   
     @FXML private Button btnCart;      
     @FXML private Button btnOrder;     
     @FXML private Button btnReport;    
-    @FXML private Button btnPayment;   
+    @FXML private Button btnPayment;
+    @FXML private Button btnShipment;  // Thêm nút Shipment   
 
     // --- HÀM KHỞI TẠO ---
     @FXML
@@ -39,51 +48,90 @@ public class DashboardController {
             lblWelcome.setText("Xin chào: " + currentUser.getUsername());
             // Áp dụng phân quyền ngay khi mở Dashboard
             applyPermissions(currentUser);
+        } else {
+            // Nếu không có user, ẩn hết để an toàn
+            hideAllButtons();
         }
     }
 
     // --- LOGIC PHÂN QUYỀN (RBAC) ---
     private void applyPermissions(Dinh_User user) {
-        String role = "CUSTOMER"; 
-        
+        // 1) Ẩn tất cả trước để tránh trạng thái thừa
+        hideAllButtons();
+
+        // 2) Kiểm tra tất cả roles (user có thể có nhiều role)
+        boolean isAdmin = false;
+        boolean isStaff = false;
+        boolean isCustomer = false;
+
         Set<Dinh_Role> roles = user.getRoles();
-        if (roles != null && !roles.isEmpty()) {
-            role = roles.iterator().next().getRoleName(); 
+        if (roles != null) {
+            for (Dinh_Role r : roles) {
+                if (r == null || r.getRoleName() == null) continue;
+                String rn = r.getRoleName().trim().toUpperCase();
+                if (rn.equals("ADMIN")) isAdmin = true;
+                else if (rn.equals("STAFF")) isStaff = true;
+                else if (rn.equals("CUSTOMER") || rn.equals("USER") || rn.equals("CLIENT")) isCustomer = true;
+            }
         }
 
-        switch (role.toUpperCase()) {
-            case "ADMIN":
-                break; // Admin thấy hết
-
-            case "STAFF":
-                // Staff ẩn: User, Audit, Báo cáo, Giỏ hàng, Thanh toán
-                hideButton(btnUser);
-                hideButton(btnAudit);
-                hideButton(btnReport);
-                hideButton(btnCart);
-                hideButton(btnPayment);
-                break;
-
-            case "CUSTOMER":
-                // Khách ẩn: User, Audit, Kho, Báo cáo
-                hideButton(btnUser);
-                hideButton(btnAudit);
-                hideButton(btnProduct);
-                hideButton(btnReport);
-                break;
-
-            default:
-                hideButton(btnUser);
-                hideButton(btnAudit);
-                hideButton(btnReport);
-                break;
+        // 3) Ưu tiên: ADMIN > STAFF > CUSTOMER
+        if (isAdmin) {
+            // Admin thấy hết
+            showButton(btnUser);
+            showButton(btnAudit);
+            showButton(btnCategory);
+            showButton(btnProduct);
+            showButton(btnCart);
+            showButton(btnOrder);
+            showButton(btnReport);
+            showButton(btnPayment);
+            showButton(btnShipment);  // ✅ Chỉ ADMIN thấy Shipment
+            return;
         }
+
+        if (isStaff) {
+            // Staff chỉ thấy: Quản lý danh mục (Category), Quản lý kho & sản phẩm (Product)
+            // ❌ KHÔNG thấy Shipment (chỉ ADMIN)
+            showButton(btnCategory);
+            showButton(btnProduct);
+            return;
+        }
+
+        if (isCustomer) {
+            // Customer chỉ thấy: Giỏ hàng, Danh sách đơn hàng (chỉ của bản thân), Thanh toán
+            showButton(btnCart);
+            showButton(btnOrder);
+            showButton(btnPayment);
+            return;
+        }
+
+        // Default: nếu không có role rõ ràng, giữ ẩn hết (an toàn)
+    }
+
+    private void hideAllButtons() {
+        hideButton(btnUser);
+        hideButton(btnAudit);
+        hideButton(btnCategory);
+        hideButton(btnProduct);
+        hideButton(btnCart);
+        hideButton(btnOrder);
+        hideButton(btnReport);
+        hideButton(btnPayment);
+        hideButton(btnShipment);
     }
 
     private void hideButton(Button btn) {
         if (btn != null) {
             btn.setVisible(false);
             btn.setManaged(false); 
+        }
+    }
+
+    private void showButton(Button btn) {
+        if (btn != null) {
+            btn.setVisible(true);
+            btn.setManaged(true);
         }
     }
 
@@ -124,6 +172,68 @@ public class DashboardController {
     @FXML public void showPayment() { loadView("PaymentView.fxml"); }
     @FXML public void showReport() { loadView("ReportView.fxml"); }
     @FXML public void showOrderList() { loadView("OrderListView.fxml"); }
+    @FXML public void showShipment() { loadView("ShipmentView.fxml"); }
+
+    @FXML
+    public void handleChangePassword() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Đổi mật khẩu");
+        dialog.setHeaderText("Nhập mật khẩu cũ và mật khẩu mới");
+        
+        PasswordField oldPassField = new PasswordField();
+        oldPassField.setPromptText("Mật khẩu cũ");
+        
+        PasswordField newPassField = new PasswordField();
+        newPassField.setPromptText("Mật khẩu mới");
+        
+        PasswordField confirmPassField = new PasswordField();
+        confirmPassField.setPromptText("Xác nhận mật khẩu mới");
+        
+        VBox vbox = new VBox(10);
+        vbox.setPadding(new Insets(20));
+        vbox.getChildren().addAll(
+            new Label("Mật khẩu cũ:"), oldPassField,
+            new Label("Mật khẩu mới:"), newPassField,
+            new Label("Xác nhận mật khẩu mới:"), confirmPassField
+        );
+        
+        dialog.getDialogPane().setContent(vbox);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            String oldPass = oldPassField.getText();
+            String newPass = newPassField.getText();
+            String confirmPass = confirmPassField.getText();
+            
+            if (oldPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
+                showAlertMsg("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
+                return;
+            }
+            
+            if (!newPass.equals(confirmPass)) {
+                showAlertMsg("Lỗi", "Mật khẩu xác nhận không khớp!");
+                return;
+            }
+            
+            Dinh_User currentUser = SessionManager.getInstance().getCurrentUser();
+            com.ucop.dinh_admin.service.UserService userService = new com.ucop.dinh_admin.service.UserService();
+            
+            if (userService.changePassword(currentUser.getUsername(), oldPass, newPass)) {
+                showAlertMsg("Thành công", "Đổi mật khẩu thành công!");
+            } else {
+                showAlertMsg("Lỗi", "Mật khẩu cũ không chính xác!");
+            }
+        }
+    }
+
+    private void showAlertMsg(String title, String msg) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(msg);
+        alert.showAndWait();
+    }
 
     @FXML
     public void handleLogout() {

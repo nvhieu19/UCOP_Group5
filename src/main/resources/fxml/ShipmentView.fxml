@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox spacing="10.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.hieu_order.controller.ShipmentController">
+   <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
+   <children>
+      <Label text="QUẢN LÝ VẬN CHUYỂN (SHIPMENT)" textFill="#2980b9">
+         <font><Font name="System Bold" size="20.0" /></font>
+      </Label>
+      
+      <HBox spacing="10.0" alignment="CENTER_LEFT">
+         <Label text="Lọc theo trạng thái:" />
+         <ComboBox fx:id="cbStatus" prefWidth="200.0" onAction="#handleFilter" />
+         <Button text="🔄 Cập nhật trạng thái" onAction="#handleUpdateStatus" style="-fx-background-color: #3498db; -fx-text-fill: white;" />
+      </HBox>
+
+      <TableView fx:id="tableShipments" VBox.vgrow="ALWAYS">
+        <columns>
+          <TableColumn fx:id="colId" text="ID" prefWidth="50">
+              <cellValueFactory><PropertyValueFactory property="id" /></cellValueFactory>
+          </TableColumn>
+          
+          <TableColumn fx:id="colTrackingNumber" text="Mã vận đơn" prefWidth="120">
+              <cellValueFactory><PropertyValueFactory property="trackingNumber" /></cellValueFactory>
+          </TableColumn>
+          
+          <TableColumn fx:id="colShippingMethod" text="Phương thức" prefWidth="120">
+              <cellValueFactory><PropertyValueFactory property="shippingMethod" /></cellValueFactory>
+          </TableColumn>
+          
+          <TableColumn fx:id="colStatus" text="Trạng thái" prefWidth="150" />
+          
+          <TableColumn fx:id="colAddress" text="Địa chỉ giao" prefWidth="300">
+              <cellValueFactory><PropertyValueFactory property="address" /></cellValueFactory>
+          </TableColumn>
+        </columns>
+      </TableView>
+   </children>
+</VBox>
