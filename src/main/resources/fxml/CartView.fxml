@@ -11,50 +11,53 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
 <VBox spacing="10.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.hieu_order.controller.CartController">
    <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
    <children>
-      <Label text="TẠO ĐƠN HÀNG MỚI" textFill="#e67e22"><font><Font name="System Bold" size="20.0" /></font></Label>
+      <Label text="TẠO ĐƠN HÀNG (POS)" textFill="#e67e22"><font><Font name="System Bold" size="20.0" /></font></Label>
       
       <HBox spacing="10.0" alignment="CENTER_LEFT">
          <Label text="Sản phẩm:" />
-         <ComboBox fx:id="cbProducts" prefWidth="250.0" />
+         <ComboBox fx:id="cbProducts" prefWidth="250.0" promptText="Chọn sản phẩm..." />
          <Label text="SL:" />
-         <TextField fx:id="txtQuantity" prefWidth="50.0" text="1" />
-         <Button onAction="#handleAddToCart" text="Thêm" style="-fx-background-color: #3498db; -fx-text-fill: white;" />
+         <TextField fx:id="txtQuantity" prefWidth="60.0" text="1" />
+         <Button onAction="#handleAddToCart" text="Thêm vào giỏ" style="-fx-background-color: #3498db; -fx-text-fill: white;" />
       </HBox>
 
       <TableView fx:id="tableCart" prefHeight="200.0">
         <columns>
-          <TableColumn text="Sản phẩm" prefWidth="250"><cellValueFactory><PropertyValueFactory property="item" /></cellValueFactory></TableColumn>
+          <TableColumn text="Tên Sản phẩm" prefWidth="250"><cellValueFactory><PropertyValueFactory property="item" /></cellValueFactory></TableColumn>
           <TableColumn text="Đơn giá" prefWidth="100"><cellValueFactory><PropertyValueFactory property="price" /></cellValueFactory></TableColumn>
-          <TableColumn text="SL" prefWidth="50"><cellValueFactory><PropertyValueFactory property="quantity" /></cellValueFactory></TableColumn>
+          <TableColumn text="Số lượng" prefWidth="80"><cellValueFactory><PropertyValueFactory property="quantity" /></cellValueFactory></TableColumn>
         </columns>
       </TableView>
 
+      <HBox alignment="CENTER_RIGHT">
+          <Button text="🗑 Xóa dòng chọn" onAction="#handleRemoveItem" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" />
+      </HBox>
+
       <HBox spacing="20.0" alignment="TOP_RIGHT">
-          <VBox spacing="5.0">
-             <Label text="Mã giảm giá (Voucher):" />
+          <VBox spacing="5.0" alignment="TOP_RIGHT">
+             <Label text="Mã Khuyến Mãi:" />
              <HBox spacing="5.0">
-                <TextField fx:id="txtPromoCode" promptText="Nhập mã..." />
+                <TextField fx:id="txtPromoCode" promptText="Nhập code..." prefWidth="120"/>
                 <Button onAction="#handleApplyCode" text="Áp dụng" />
              </HBox>
           </VBox>
 
-          <GridPane hgap="10.0" vgap="5.0">
+          <GridPane hgap="10.0" vgap="5.0" style="-fx-background-color: #f9f9f9; -fx-padding: 10; -fx-background-radius: 5;">
              <columnConstraints>
                 <ColumnConstraints halignment="RIGHT" />
-                <ColumnConstraints halignment="RIGHT" minWidth="100.0" />
+                <ColumnConstraints halignment="RIGHT" minWidth="120.0" />
              </columnConstraints>
              <children>
-                <Label text="Tạm tính:" GridPane.rowIndex="0" />
+                <Label text="Tạm tính (Subtotal):" GridPane.rowIndex="0" />
                 <Label fx:id="lblSubTotal" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
                 
-                <Label text="Thuế (10%):" GridPane.rowIndex="1" />
+                <Label text="Thuế (VAT 10%):" GridPane.rowIndex="1" />
                 <Label fx:id="lblTax" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                 
                 <Label text="Phí Ship:" GridPane.rowIndex="2" />
@@ -63,12 +66,12 @@
                 <Label text="Giảm giá:" GridPane.rowIndex="3" textFill="GREEN" />
                 <Label fx:id="lblDiscount" text="0" GridPane.columnIndex="1" GridPane.rowIndex="3" textFill="GREEN" />
                 
-                <Label text="TỔNG CỘNG:" GridPane.rowIndex="4"><font><Font name="System Bold" size="14.0" /></font></Label>
-                <Label fx:id="lblGrandTotal" text="0" textFill="#c0392b" GridPane.columnIndex="1" GridPane.rowIndex="4"><font><Font name="System Bold" size="16.0" /></font></Label>
+                <Label text="TỔNG THANH TOÁN:" GridPane.rowIndex="4"><font><Font name="System Bold" size="14.0" /></font></Label>
+                <Label fx:id="lblGrandTotal" text="0 VNĐ" textFill="#c0392b" GridPane.columnIndex="1" GridPane.rowIndex="4"><font><Font name="System Bold" size="16.0" /></font></Label>
              </children>
           </GridPane>
       </HBox>
 
-      <Button onAction="#handleCheckout" text="XÁC NHẬN ĐẶT HÀNG (PLACED)" maxWidth="Infinity" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10;" />
+      <Button onAction="#handleCheckout" text="XÁC NHẬN ĐẶT HÀNG (PLACED)" maxWidth="Infinity" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12;" />
    </children>
 </VBox>

@@ -19,10 +19,11 @@ public class Hieu_Order {
     private LocalDateTime orderDate;
 
     // --- CÁC TRƯỜNG TÍNH TOÁN TIỀN (Requirement 3.6) ---
-    private BigDecimal subTotal;      // Tổng tiền hàng
-    private BigDecimal taxAmount;     // Thuế VAT (10%)
-    private BigDecimal shippingFee;   // Phí ship
-    private BigDecimal discountAmount;// Số tiền được giảm
+    // Lưu chi tiết để phục vụ báo cáo và hiển thị hóa đơn
+    private BigDecimal subTotal;      // Tổng tiền hàng (chưa thuế/phí)
+    private BigDecimal taxAmount;     // Thuế VAT
+    private BigDecimal shippingFee;   // Phí vận chuyển
+    private BigDecimal discountAmount;// Số tiền được giảm giá
     
     @Column(name = "total_amount")
     private BigDecimal totalAmount;   // Tổng thanh toán cuối cùng (Grand Total)
@@ -30,7 +31,7 @@ public class Hieu_Order {
     private String promotionCode;     // Mã giảm giá đã áp dụng
 
     // --- TRẠNG THÁI ĐƠN HÀNG (Requirement 3.5) ---
-    // CART, PLACED, PENDING_PAYMENT, PAID, PACKED, SHIPPED, DELIVERED, CLOSED, CANCELED
+    // Quy trình: CART -> PLACED -> PENDING_PAYMENT -> PAID -> PACKED -> SHIPPED -> DELIVERED -> CLOSED
     private String status;
 
     @ManyToOne
@@ -42,7 +43,8 @@ public class Hieu_Order {
 
     public Hieu_Order() {
         this.orderDate = LocalDateTime.now();
-        this.status = "CART"; // Mặc định là Giỏ hàng
+        this.status = "CART"; // Mặc định khi mới tạo là Giỏ hàng
+        // Khởi tạo giá trị 0 để tránh lỗi NullPointerException khi tính toán
         this.subTotal = BigDecimal.ZERO;
         this.taxAmount = BigDecimal.ZERO;
         this.shippingFee = BigDecimal.ZERO;
@@ -55,7 +57,7 @@ public class Hieu_Order {
         item.setOrder(this);
     }
 
-    // Getters & Setters (Bạn tự generate đủ nhé)
+    // Getters & Setters (Bạn hãy generate đầy đủ trong Eclipse nhé)
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public LocalDateTime getOrderDate() { return orderDate; }

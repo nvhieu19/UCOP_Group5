@@ -12,24 +12,22 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.util.StringConverter;
 
+import java.text.DecimalFormat;
+
 public class CartController {
 
     @FXML private ComboBox<Hai_Item> cbProducts;
     @FXML private TextField txtQuantity;
     @FXML private TableView<Hieu_OrderItem> tableCart;
-    
-    // Các Label hiển thị tiền
-    @FXML private Label lblSubTotal;
-    @FXML private Label lblTax;
-    @FXML private Label lblShip;
-    @FXML private Label lblDiscount;
-    @FXML private Label lblGrandTotal;
-    
     @FXML private TextField txtPromoCode;
+    
+    // Các label hiển thị tiền
+    @FXML private Label lblSubTotal, lblTax, lblShip, lblDiscount, lblGrandTotal;
 
     private OrderService orderService = new OrderService();
     private Hieu_Order currentOrder;
     private ObservableList<Hieu_OrderItem> cartItems;
+    private DecimalFormat df = new DecimalFormat("#,###"); // Format số tiền cho đẹp
 
     @FXML
     public void initialize() {
@@ -37,58 +35,64 @@ public class CartController {
         cartItems = FXCollections.observableArrayList();
         tableCart.setItems(cartItems);
 
+        // Load sản phẩm vào ComboBox
         ObservableList<Hai_Item> products = FXCollections.observableArrayList(orderService.getAvailableProducts());
         cbProducts.setItems(products);
+        
+        // Custom hiển thị ComboBox: Hiện Tên + Giá
         cbProducts.setConverter(new StringConverter<Hai_Item>() {
-            @Override public String toString(Hai_Item item) { return (item != null) ? item.getName() + " - " + item.getPrice() : ""; }
+            @Override public String toString(Hai_Item item) { 
+                return (item == null) ? "" : item.getName() + " (" + df.format(item.getPrice()) + " đ)"; 
+            }
             @Override public Hai_Item fromString(String string) { return null; }
         });
         
-        updateOrderDisplay();
+        updateOrderDisplay(); // Hiển thị số 0 ban đầu
     }
 
     @FXML
     public void handleAddToCart() {
-        Hai_Item selectedItem = cbProducts.getValue();
-        if (selectedItem == null) return;
+        Hai_Item selected = cbProducts.getValue();
+        if (selected == null) return;
+
         try {
             int qty = Integer.parseInt(txtQuantity.getText());
-            Hieu_OrderItem line = new Hieu_OrderItem(selectedItem, qty);
+            if (qty <= 0) throw new NumberFormatException();
+
+            Hieu_OrderItem item = new Hieu_OrderItem(selected, qty);
+            currentOrder.addOrderItem(item); // Thêm vào logic
+            cartItems.add(item); // Thêm vào giao diện
             
-            currentOrder.addOrderItem(line);
-            cartItems.add(line);
-            
-            // Tính toán lại tiền nong
-            reCalculate();
+            reCalculate(); // Tính lại tiền ngay lập tức
             
         } catch (NumberFormatException e) {
-            showAlert("Lỗi", "Số lượng sai!");
+            showAlert("Lỗi", "Số lượng không hợp lệ!");
         }
     }
 
     @FXML
     public void handleApplyCode() {
-        reCalculate(); // Tính lại kèm mã code
+        reCalculate(); // Tính lại tiền với mã code trong ô input
         if (currentOrder.getDiscountAmount().doubleValue() > 0) {
-            showAlert("Thành công", "Đã áp dụng mã: " + currentOrder.getPromotionCode());
+            showAlert("Thành công", "Đã áp dụng mã giảm giá: " + currentOrder.getPromotionCode());
         } else {
-            showAlert("Thông báo", "Mã không hợp lệ hoặc không tìm thấy!");
+            showAlert("Thông báo", "Mã giảm giá không hợp lệ hoặc hết hạn.");
         }
     }
 
+    // Hàm trung tâm để tính toán và hiển thị lại số liệu
     private void reCalculate() {
-        String code = txtPromoCode.getText().trim();
-        // Gọi Service tính toán tất cả (Thuế, Ship, Code)
+        String code = txtPromoCode.getText();
         orderService.calculateOrderDetails(currentOrder, code);
         updateOrderDisplay();
     }
 
     private void updateOrderDisplay() {
-        lblSubTotal.setText(String.format("%,.0f", currentOrder.getSubTotal()));
-        lblTax.setText(String.format("%,.0f", currentOrder.getTaxAmount()));
-        lblShip.setText(String.format("%,.0f", currentOrder.getShippingFee()));
-        lblDiscount.setText(String.format("%,.0f", currentOrder.getDiscountAmount()));
-        lblGrandTotal.setText(String.format("%,.0f VNĐ", currentOrder.getTotalAmount()));
+        lblSubTotal.setText(df.format(currentOrder.getSubTotal()));
+        lblTax.setText(df.format(currentOrder.getTaxAmount()));
+        lblShip.setText(df.format(currentOrder.getShippingFee()));
+        lblDiscount.setText(df.format(currentOrder.getDiscountAmount()));
+        lblGrandTotal.setText(df.format(currentOrder.getTotalAmount()) + " VNĐ");
     }
 
     @FXML
@@ -98,15 +102,27 @@ public class CartController {
             return;
         }
         try {
-            // Lấy user demo (Thực tế phải lấy từ Session đăng nhập)
-            Dinh_User customer = new UserService().login("vip_member", "pass123");
-            if(customer == null) customer = new UserService().login("admin_dinh", "123456"); // Fallback
+            UserService userService = new UserService();
+            // 1. Thử lấy user 'admin_dinh'
+            Dinh_User customer = userService.login("admin_dinh", "123456");
+            
+            // 2. Nếu không có admin, thử lấy user 'guest'
+            if (customer == null) {
+                // Thay vì tạo mới ngay, hãy thử login bằng 'guest' trước
+                customer = userService.login("guest", "123");
+            }
+            
+            // 3. Nếu vẫn không có 'guest' trong DB, lúc này mới tạo mới
+            if (customer == null) {
+                customer = new Dinh_User("guest", "123", "ACTIVE");
+                // Lưu ý: OrderService sẽ lo phần save user mới này
+            }
 
             orderService.createOrder(currentOrder, customer);
             
-            showAlert("Thành công", "Đơn hàng đã tạo (Trạng thái: PLACED)\nTổng tiền: " + lblGrandTotal.getText());
+            showAlert("Thành công", "Đã tạo đơn hàng (Trạng thái: PLACED)!\nTổng tiền: " + lblGrandTotal.getText());
             
-            // Reset
+            // Reset form
             currentOrder = new Hieu_Order();
             cartItems.clear();
             txtPromoCode.clear();
@@ -114,15 +130,31 @@ public class CartController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Lỗi", "Lỗi lưu đơn hàng: " + e.getMessage());
+            showAlert("Lỗi", "Không thể lưu đơn hàng: " + e.getMessage());
         }
     }
 
-    private void showAlert(String title, String content) {
+    private void showAlert(String title, String msg) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
+        alert.setContentText(msg);
         alert.showAndWait();
+    }
+    @FXML
+    public void handleRemoveItem() {
+        Hieu_OrderItem selected = tableCart.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            // 1. Xóa khỏi danh sách hiển thị
+            cartItems.remove(selected);
+            
+            // 2. Xóa khỏi logic tính toán
+            currentOrder.getOrderItems().remove(selected);
+            
+            // 3. Tính lại tiền
+            reCalculate();
+        } else {
+            showAlert("Chú ý", "Vui lòng chọn món cần xóa trong bảng!");
+        }
     }
 }
