@@ -24,11 +24,17 @@ public class HibernateUtil {
                 // 1. Phần của ĐỊNH (Admin)
                 config.addAnnotatedClass(Dinh_Role.class);
                 config.addAnnotatedClass(Dinh_User.class);
+                // Mới thêm: Nhật ký hoạt động (Lấy từ server về)
+                try {
+                    config.addAnnotatedClass(Dinh_AuditLog.class);
+                } catch (Exception e) {
+                    System.out.println("Chưa có file Dinh_AuditLog.java, bỏ qua...");
+                }
 
                 // 2. Phần của HẢI (Catalog)
                 config.addAnnotatedClass(Hai_Category.class);
                 config.addAnnotatedClass(Hai_Item.class);
-                // [MỚI] Đăng ký Entity Kho & Tồn kho
+                // [MỚI] Đăng ký Entity Kho & Tồn kho (Của BẠN làm - Giữ lại)
                 config.addAnnotatedClass(Hai_Warehouse.class);
                 config.addAnnotatedClass(Hai_StockItem.class);
                 
