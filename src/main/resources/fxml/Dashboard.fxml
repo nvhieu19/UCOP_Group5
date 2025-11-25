@@ -30,12 +30,19 @@
                </font>
             </Label>
             
-            <Button mnemonicParsing="false" onAction="#showUserMgmt" prefWidth="200.0" text="👤 Quản lý Người dùng (Admin)" />
-            <Button mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
-            <Button mnemonicParsing="false" onAction="#showOrder" prefWidth="200.0" text="🛒 Giỏ hàng" />
-			<Button mnemonicParsing="false" onAction="#showOrderList" prefWidth="200.0" text="📜 Danh sách Đơn hàng" />
-            <Button mnemonicParsing="false" onAction="#showPayment" prefWidth="200.0" text="💳 Thanh toán &amp; Ví" />
-            <Button mnemonicParsing="false" onAction="#showReport" prefWidth="200.0" text="📊 Báo cáo &amp; Thống kê" />
+            <Button fx:id="btnUser" mnemonicParsing="false" onAction="#showUserMgmt" prefWidth="200.0" text="👤 Quản lý Người dùng (Admin)" />
+            
+            <Button fx:id="btnAudit" mnemonicParsing="false" onAction="#showAuditLog" prefWidth="200.0" text="🕒 Nhật ký Hoạt động" />
+            
+            <Button fx:id="btnProduct" mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
+            
+            <Button fx:id="btnCart" mnemonicParsing="false" onAction="#showOrder" prefWidth="200.0" text="🛒 Giỏ hàng" />
+			
+            <Button fx:id="btnOrder" mnemonicParsing="false" onAction="#showOrderList" prefWidth="200.0" text="📜 Danh sách Đơn hàng" />
+            
+            <Button fx:id="btnPayment" mnemonicParsing="false" onAction="#showPayment" prefWidth="200.0" text="💳 Thanh toán &amp; Ví" />
+            
+            <Button fx:id="btnReport" mnemonicParsing="false" onAction="#showReport" prefWidth="200.0" text="📊 Báo cáo &amp; Thống kê" />
             
             <Button mnemonicParsing="false" onAction="#handleLogout" prefWidth="200.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" text="Đăng xuất" />
          </children>

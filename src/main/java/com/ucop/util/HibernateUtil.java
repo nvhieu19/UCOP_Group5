@@ -21,9 +21,11 @@ public class HibernateUtil {
                 
                 // --- KHU VỰC ĐĂNG KÝ CLASS CỦA 5 THÀNH VIÊN ---
                 
-                // 1. Phần của ĐỊNH
+                // 1. Phần của ĐỊNH (admin dz khoai lang)
                 config.addAnnotatedClass(Dinh_Role.class);
                 config.addAnnotatedClass(Dinh_User.class);
+                // Mới thêm phần xem nhật kí hoạt động
+                config.addAnnotatedClass(Dinh_AuditLog.class);
 
                 // 2. Phần của HẢI (Catalog) - THÊM MỚI
                 config.addAnnotatedClass(Hai_Category.class);
