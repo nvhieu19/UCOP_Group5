@@ -20,17 +20,16 @@ public class DashboardController {
     @FXML 
     private BorderPane mainPane; 
 
-    // [MỚI] Biến để lưu username người dùng đang đăng nhập (để truyền sang các màn hình khác)
+    // [MỚI] Biến để lưu username người dùng đang đăng nhập
     private String currentUsername;
 
     // Hàm nhận dữ liệu từ Login
     public void setUsername(String username) {
-        // [MỚI] Lưu lại username vào biến
         this.currentUsername = username;
         lblWelcome.setText("Xin chào, " + username + "!");
     }
 
-    // --- HÀM TIỆN ÍCH LOAD VIEW ---
+    // --- HÀM TIỆN ÍCH LOAD VIEW (Giữ lại để dùng cho các nút khác) ---
     private void loadView(String fxmlFile) {
         try {
             Parent view = FXMLLoader.load(getClass().getResource("/fxml/" + fxmlFile));
@@ -55,21 +54,18 @@ public class DashboardController {
 
     @FXML
     public void showOrder() {
-        // Đã sửa tên file cho khớp với hướng dẫn trước (CartView.fxml)
         loadView("CartView.fxml");
     }
 
-    // [ĐÃ CẬP NHẬT] Hàm mở chức năng Payment của Long
+    // [QUAN TRỌNG] Hàm mở chức năng Payment của Long (Code xịn)
     @FXML
     public void showPayment() {
-<<<<<<< HEAD
         try {
             // 1. Load giao diện từ file FXML của Long
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/PaymentView.fxml"));
             Parent view = loader.load();
 
             // 2. Lấy Controller của Long để truyền username sang
-            // (Để bên Payment biết là đang thao tác ví của ai)
             PaymentController paymentCtrl = loader.getController();
             paymentCtrl.setUsername(currentUsername);
 
@@ -77,13 +73,8 @@ public class DashboardController {
             mainPane.setCenter(view);
         } catch (IOException e) {
             e.printStackTrace();
-            // Nếu lỗi, hiện thông báo lên màn hình cho dễ debug
             lblWelcome.setText("Lỗi: Không tìm thấy file PaymentView.fxml hoặc lỗi code Controller!");
         }
-=======
-        // Sắp làm: PaymentView.fxml
-        loadView("PaymentView.fxml");
->>>>>>> branch 'master' of https://github.com/nvhieu19/UCOP_Group5.git
     }
 
     @FXML
@@ -102,8 +93,9 @@ public class DashboardController {
             e.printStackTrace();
         }
     }
+    
     @FXML
     public void showOrderList() {
         loadView("OrderListView.fxml");
     }
-} 
+}

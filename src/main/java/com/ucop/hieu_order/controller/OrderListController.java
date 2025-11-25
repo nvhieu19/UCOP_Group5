@@ -64,35 +64,22 @@ public class OrderListController {
 
         // LOGIC THANH TOÁN (Gọi Module SV4 - Long)
         try {
-            Dinh_User customer = selected.getCustomer();
-            Long_Wallet wallet = paymentService.getMyWallet(customer);
+            // Lấy tên người mua
+            String username = selected.getCustomer().getUsername();
             
-            // Check tiền trong ví
-            if (wallet.getBalance().compareTo(selected.getTotalAmount()) >= 0) {
-                // 1. Trừ tiền ví
-                wallet.deduct(selected.getTotalAmount());
-                // Cập nhật ví vào DB (Cần thêm hàm update trong WalletDAO hoặc dùng session thủ công, ở đây giả định service làm giúp)
-                // paymentService.updateWallet(wallet); // (Bạn cần bổ sung hàm này bên PaymentService nếu chưa có)
-                
-                // 2. Lưu lịch sử thanh toán
-                // Long_Payment pay = new Long_Payment(selected, "WALLET", selected.getTotalAmount());
-                // paymentService.savePayment(pay); // (Bổ sung bên PaymentService)
-
-                // 3. Cập nhật trạng thái đơn hàng
-                selected.setStatus("PAID");
-                orderDAO.update(selected);
-                
-                loadData(); // Refresh bảng
-                showAlert("Thành công", "Thanh toán thành công! Số dư mới: " + wallet.getBalance());
-            } else {
-                showAlert("Thất bại", "Ví không đủ tiền! Số dư: " + wallet.getBalance() + "\nCần: " + selected.getTotalAmount());
-            }
+            // Gọi hàm "payOrder" xịn bên Service của Long
+            // Hàm này sẽ tự: Tính thuế/ship, Trừ ví, Lưu lịch sử, Cập nhật đơn hàng...
+            paymentService.payOrder(username, selected.getId(), ""); 
+            
+            // Nếu chạy qua được dòng trên tức là thành công
+            loadData(); // Load lại bảng để thấy trạng thái đổi thành PAID
+            showAlert("Thành công", "Thanh toán hoàn tất đơn hàng: " + selected.getId());
+            
         } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Lỗi hệ thống", e.getMessage());
+            // Nếu lỗi (ví dụ thiếu tiền), nó sẽ hiện thông báo ra đây
+            showAlert("Thất bại", e.getMessage());
         }
     }
-
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
