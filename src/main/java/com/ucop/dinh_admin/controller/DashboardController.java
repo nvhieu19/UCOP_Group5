@@ -30,45 +30,39 @@ public class DashboardController {
         lblWelcome.setText("Xin chào, " + username + "!");
     }
 
-    // --- CÁC HÀM XỬ LÝ SỰ KIỆN MENU ---
-
-    @FXML
-    public void showUserMgmt() {
+    // --- HÀM TIỆN ÍCH LOAD VIEW ---
+    private void loadView(String fxmlFile) {
         try {
-            // Load giao diện Quản lý User
-            Parent view = FXMLLoader.load(getClass().getResource("/fxml/UserView.fxml"));
+            Parent view = FXMLLoader.load(getClass().getResource("/fxml/" + fxmlFile));
             mainPane.setCenter(view);
         } catch (IOException e) {
             e.printStackTrace();
-            lblWelcome.setText("Lỗi: Không tìm thấy file UserView.fxml!");
+            lblWelcome.setText("Lỗi: Không tìm thấy file " + fxmlFile + " trong thư mục /fxml/");
         }
+    }
+
+    // --- CÁC SỰ KIỆN MENU ---
+
+    @FXML
+    public void showUserMgmt() {
+        loadView("UserView.fxml");
     }
 
     @FXML
     public void showCatalog() {
-        try {
-            Parent view = FXMLLoader.load(getClass().getResource("/fxml/ProductView.fxml"));
-            mainPane.setCenter(view);
-        } catch (IOException e) {
-            e.printStackTrace();
-            lblWelcome.setText("Lỗi: Không tìm thấy file ProductView.fxml!");
-        }
+        loadView("ProductView.fxml");
     }
 
     @FXML
     public void showOrder() {
-        try {
-            Parent view = FXMLLoader.load(getClass().getResource("/fxml/CartView.fxml"));
-            mainPane.setCenter(view);
-        } catch (IOException e) {
-            e.printStackTrace();
-            lblWelcome.setText("Lỗi: Không tìm thấy file CartView.fxml!");
-        }
+        // Đã sửa tên file cho khớp với hướng dẫn trước (CartView.fxml)
+        loadView("CartView.fxml");
     }
 
     // [ĐÃ CẬP NHẬT] Hàm mở chức năng Payment của Long
     @FXML
     public void showPayment() {
+<<<<<<< HEAD
         try {
             // 1. Load giao diện từ file FXML của Long
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/PaymentView.fxml"));
@@ -86,17 +80,15 @@ public class DashboardController {
             // Nếu lỗi, hiện thông báo lên màn hình cho dễ debug
             lblWelcome.setText("Lỗi: Không tìm thấy file PaymentView.fxml hoặc lỗi code Controller!");
         }
+=======
+        // Sắp làm: PaymentView.fxml
+        loadView("PaymentView.fxml");
+>>>>>>> branch 'master' of https://github.com/nvhieu19/UCOP_Group5.git
     }
 
     @FXML
     public void showReport() {
-        try {
-            Parent view = FXMLLoader.load(getClass().getResource("/fxml/ReportView.fxml"));
-            mainPane.setCenter(view);
-        } catch (IOException e) {
-            e.printStackTrace();
-            lblWelcome.setText("Lỗi: Không tìm thấy file ReportView.fxml!");
-        }
+        loadView("ReportView.fxml");
     }
 
     @FXML
@@ -110,4 +102,8 @@ public class DashboardController {
             e.printStackTrace();
         }
     }
-}
+    @FXML
+    public void showOrderList() {
+        loadView("OrderListView.fxml");
+    }
+} 
