@@ -111,43 +111,27 @@ public class OrderListController {
             return;
         }
 
+        // LOGIC THANH TOÁN (Gọi API xịn của Module SV4 - Long)
         try {
-            Dinh_User customer = selected.getCustomer();
-            Long_Wallet wallet = paymentService.getMyWallet(customer);
+            String username = selected.getCustomer().getUsername();
             
-            BigDecimal totalAmount = selected.getTotalAmount();
-            BigDecimal currentBalance = wallet.getBalance();
-
-            // Debug in ra console để kiểm tra
-            System.out.println("Ví hiện có: " + currentBalance);
-            System.out.println("Cần trả: " + totalAmount);
-
-            // SO SÁNH SỐ DƯ
-            if (currentBalance.compareTo(totalAmount) >= 0) {
-                // 1. Trừ tiền
-                wallet.deduct(totalAmount);
-                paymentService.updateWallet(wallet); // Nhớ đảm bảo PaymentService có hàm này
-                
-                // 2. Cập nhật trạng thái đơn
-                selected.setStatus("PAID");
-                orderDAO.update(selected);
-                
-                loadData(); 
-                showAlert("Thành công", "Thanh toán thành công!\nSố dư còn lại: " + df.format(wallet.getBalance()) + " VNĐ");
-            } else {
-                // Thông báo lỗi rõ ràng hơn
-                showAlert("Thất bại", 
-                    "Số dư ví không đủ!\n" +
-                    "Ví hiện có: " + df.format(currentBalance) + " VNĐ\n" +
-                    "Cần trả (Gồm VAT): " + df.format(totalAmount) + " VNĐ\n" +
-                    "Thiếu: " + df.format(totalAmount.subtract(currentBalance)) + " VNĐ");
-            }
+            // Gọi hàm payOrder (Hàm này sẽ tự động: Trừ ví, Lưu lịch sử, Đổi trạng thái đơn)
+            // Tham số: (Username, OrderID, VoucherCode)
+            paymentService.payOrder(username, selected.getId(), ""); 
+            
+            // Nếu chạy đến đây là thành công
+            loadData(); // Refresh bảng
+            
+            // Lấy số dư mới để hiện thông báo (Optional)
+            Long_Wallet wallet = paymentService.getMyWallet(selected.getCustomer());
+            showAlert("Thành công", "Thanh toán hoàn tất!\nSố dư còn lại: " + df.format(wallet.getBalance()) + " VNĐ");
+            
         } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Lỗi hệ thống", e.getMessage());
+            // Nếu ví thiếu tiền hoặc lỗi gì đó, Service sẽ ném thông báo ra đây
+            e.printStackTrace(); // In lỗi ra console để debug nếu cần
+            showAlert("Thất bại", e.getMessage());
         }
     }
-
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);

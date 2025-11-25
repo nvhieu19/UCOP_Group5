@@ -30,17 +30,26 @@
          </children>
       </HBox>
 
-      <!-- PHẦN MỚI: THANH TOÁN ĐƠN HÀNG -->
       <VBox spacing="10.0" style="-fx-border-color: #2980b9; -fx-border-radius: 5; -fx-padding: 15;">
          <Label text="THANH TOÁN ĐƠN HÀNG" textFill="#2980b9">
             <font><Font name="System Bold" size="16.0" /></font>
          </Label>
+         
          <Label text="Chọn đơn hàng chưa thanh toán:" />
-         <ComboBox fx:id="cbOrdersToPay" prefWidth="Infinity" promptText="Không có đơn hàng nào cần thanh toán" />
-         <HBox spacing="10.0" alignment="CENTER_RIGHT">
-            <Label fx:id="lblOrderTotal" text="Tổng tiền: 0 VNĐ" HBox.hgrow="ALWAYS" maxWidth="Infinity" />
-            <Button fx:id="btnPayByWallet" text="Thanh toán bằng Ví" onAction="#handlePayByWallet" style="-fx-background-color: #27ae60; -fx-text-fill: white;" />
-            <Button fx:id="btnPayCOD" text="Thanh toán khi nhận hàng (COD)" onAction="#handlePayCOD" style="-fx-background-color: #f39c12; -fx-text-fill: white;" />
+         <ComboBox fx:id="cbOrdersToPay" prefWidth="500.0" promptText="-- Chọn đơn hàng --" />
+         
+         <HBox spacing="10.0" alignment="CENTER_LEFT">
+            <Label fx:id="lblOrderTotal" text="Tổng tiền: 0 VNĐ" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
+            
+            <Label maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+            
+            <Button fx:id="btnPayByWallet" text="Thanh toán Ví" onAction="#handlePayByWallet" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;" />
+            
+            <Button text="Chuyển khoản (QR)" onAction="#handlePayByBank" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold;" />
+            
+            <Button fx:id="btnPayCOD" text="Thanh toán COD" onAction="#handlePayCOD" style="-fx-background-color: #f39c12; -fx-text-fill: white;" />
+            
+            <Button text="Hoàn tiền (Refund)" onAction="#handleRefund" style="-fx-background-color: #95a5a6; -fx-text-fill: white;" />
          </HBox>
       </VBox>
 

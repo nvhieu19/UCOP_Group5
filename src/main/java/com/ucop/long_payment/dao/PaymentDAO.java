@@ -8,20 +8,27 @@ import java.util.List;
 
 public class PaymentDAO extends AbstractDAO<Long_Payment, Long> {
     
-    // Hàm tìm lịch sử thanh toán dựa trên ID người dùng
-    // Logic: Tìm các Payment -> Thuộc về Order -> Của Customer có ID là ...
-    public List<Long_Payment> findByUserId(Long userId) {
+    // Hàm tìm tất cả giao dịch của 1 user (username)
+    public List<Long_Payment> findByUsername(String username) {
         try (Session session = getSession()) {
-            // Câu lệnh HQL: Join bảng Payment với bảng Order để lọc theo User
-            String hql = "SELECT p FROM Long_Payment p JOIN p.order o WHERE o.customer.id = :uid ORDER BY p.paymentDate DESC";
-            
+            // Truy vấn HQL: Join từ Payment -> Order -> Customer -> Username
+            String hql = "SELECT p FROM Long_Payment p WHERE p.order.customer.username = :u ORDER BY p.paymentDate DESC";
             Query<Long_Payment> query = session.createQuery(hql, Long_Payment.class);
-            query.setParameter("uid", userId);
-            
+            query.setParameter("u", username);
             return query.list();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+    
+    // Tìm giao dịch theo User ID (Hỗ trợ hàm getMyHistory cũ)
+    public List<Long_Payment> findByUserId(Long userId) {
+        try (Session session = getSession()) {
+            String hql = "SELECT p FROM Long_Payment p WHERE p.order.customer.id = :uid ORDER BY p.paymentDate DESC";
+            Query<Long_Payment> query = session.createQuery(hql, Long_Payment.class);
+            query.setParameter("uid", userId);
+            return query.list();
         }
     }
 }
