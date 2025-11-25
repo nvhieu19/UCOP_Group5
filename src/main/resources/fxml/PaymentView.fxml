@@ -14,15 +14,15 @@
 <?import javafx.scene.text.Font?>
 
 <HBox spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.long_payment.controller.PaymentController">
-   <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
+   <padding><Insets bottom="10" left="10" right="10" top="10" /></padding>
    
-   <VBox spacing="15.0" HBox.hgrow="ALWAYS">
+   <VBox spacing="10.0" HBox.hgrow="ALWAYS">
        <Label text="VÍ ĐIỆN TỬ" textFill="#27ae60"><font><Font name="System Bold" size="20.0" /></font></Label>
        
-       <HBox spacing="15.0" style="-fx-background-color: #ecf0f1; -fx-padding: 15; -fx-background-radius: 10;">
+       <HBox spacing="15.0" style="-fx-background-color: #ecf0f1; -fx-padding: 10; -fx-background-radius: 10;">
           <VBox>
               <Label text="Số dư khả dụng:" />
-              <Label fx:id="lblBalance" text="0 VNĐ" textFill="#2980b9"><font><Font name="System Bold" size="28.0" /></font></Label>
+              <Label fx:id="lblBalance" text="0 VNĐ" textFill="#2980b9"><font><Font name="System Bold" size="24.0" /></font></Label>
           </VBox>
        </HBox>
 
@@ -44,7 +44,7 @@
        </TableView>
    </VBox>
    
-   <VBox spacing="15.0" prefWidth="350.0" style="-fx-border-color: #bdc3c7; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 20;">
+   <VBox spacing="8.0" prefWidth="350.0" style="-fx-border-color: #bdc3c7; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 10;">
        <Label text="THANH TOÁN ĐƠN HÀNG" textFill="#e67e22"><font><Font name="System Bold" size="18.0" /></font></Label>
        
        <TextField fx:id="txtOrderId" promptText="Nhập Mã Đơn Hàng (Order ID)" />
@@ -52,18 +52,19 @@
        
        <Button text="Kiểm tra &amp; Tạo QR" onAction="#handleCheckOrder" maxWidth="Infinity" style="-fx-background-color: #3498db; -fx-text-fill: white;" />
        
-       <VBox spacing="5.0" style="-fx-background-color: #f7f9f9; -fx-padding: 10; -fx-background-radius: 5;">
+       <VBox spacing="2.0" style="-fx-background-color: #f7f9f9; -fx-padding: 5; -fx-background-radius: 5;">
            <Label text="CHI TIẾT THANH TOÁN:" style="-fx-font-weight: bold;"/>
            <Label fx:id="lblDetail" text="..." wrapText="true" />
            <Label text="Tổng thanh toán:" />
-           <Label fx:id="lblFinalTotal" text="0 VNĐ" textFill="#c0392b"><font><Font name="System Bold" size="24.0" /></font></Label>
+           <Label fx:id="lblFinalTotal" text="0 VNĐ" textFill="#c0392b"><font><Font name="System Bold" size="20.0" /></font></Label>
        </VBox>
        
-       <VBox alignment="CENTER" spacing="5.0">
-           <Label text="Quét mã để xác nhận:" textFill="#7f8c8d" />
-           <ImageView fx:id="imgQR" fitWidth="200.0" fitHeight="200.0" preserveRatio="true" />
+       <VBox alignment="CENTER" spacing="2.0">
+           <Label text="Quét mã xác nhận:" textFill="#7f8c8d" />
+           <ImageView fx:id="imgQR" fitWidth="120.0" fitHeight="120.0" preserveRatio="true" />
        </VBox>
        
-       <Button text="XÁC NHẬN THANH TOÁN" onAction="#handlePay" maxWidth="Infinity" prefHeight="40.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;" />
+       <Button text="XÁC NHẬN THANH TOÁN" onAction="#handlePay" maxWidth="Infinity" prefHeight="35.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;" />
+       <Button text="HOÀN TIỀN (REFUND)" onAction="#handleRefund" maxWidth="Infinity" style="-fx-background-color: #95a5a6; -fx-text-fill: white;" />   
    </VBox>
 </HBox>

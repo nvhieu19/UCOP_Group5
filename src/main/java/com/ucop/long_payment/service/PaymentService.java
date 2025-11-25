@@ -2,14 +2,13 @@ package com.ucop.long_payment.service;
 
 import com.ucop.core.dao.AbstractDAO;
 import com.ucop.dinh_admin.Dinh_User;
-import com.ucop.hai_catalog.dao.ItemDAO;
 import com.ucop.hieu_order.Hieu_Order;
 import com.ucop.hieu_order.dao.OrderDAO;
 import com.ucop.long_payment.Long_Payment;
 import com.ucop.long_payment.Long_Wallet;
 import com.ucop.long_payment.dao.PaymentDAO;
 import com.ucop.long_payment.dao.WalletDAO;
-import com.ucop.quang_report.Quang_Promotion; // Import code của Quang
+import com.ucop.quang_report.Quang_Promotion; 
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -60,11 +59,20 @@ public class PaymentService {
         return null;
     }
 
-    // Tính toán số tiền cuối cùng (Kèm Thuế, Ship, Voucher)
+    // Tính toán số tiền cuối cùng (Kèm Thuế, Ship THÔNG MINH, Voucher)
     public double calculateFinalAmount(Hieu_Order order, String voucherCode) throws Exception {
         double subTotal = order.getTotalAmount().doubleValue();
         double tax = subTotal * 0.1; // Thuế 10%
-        double ship = 30000;         // Phí ship cứng 30k
+        
+        // --- [MỚI] LOGIC SHIP THÔNG MINH ---
+        // Đơn hàng >= 1 triệu -> Miễn phí Ship (0đ)
+        // Đơn hàng < 1 triệu -> Phí Ship 30.000đ
+        double ship = 30000;
+        if (subTotal >= 1000000) {
+            ship = 0; 
+        }
+        // ----------------------------------
+
         double discount = 0;
 
         // Check Voucher của Quang
@@ -72,6 +80,7 @@ public class PaymentService {
             List<Quang_Promotion> promos = promoDAO.findAll();
             for (Quang_Promotion p : promos) {
                 if (p.getCode().equalsIgnoreCase(voucherCode)) {
+                    // Logic: Giảm giá trực tiếp (FIXED)
                     discount = p.getDiscountValue();
                     break;
                 }
@@ -108,6 +117,31 @@ public class PaymentService {
         // 3. Lưu lịch sử giao dịch
         Long_Payment payment = new Long_Payment(order, "WALLET_QR", BigDecimal.valueOf(finalAmount));
         paymentDAO.save(payment);
+    }
+
+    // --- CHỨC NĂNG HOÀN TIỀN (REFUND) ---
+    public void refundOrder(String adminUsername, Long orderId) throws Exception {
+        Hieu_Order order = orderDAO.findById(orderId);
+        
+        if (order == null) throw new Exception("Không tìm thấy đơn hàng ID: " + orderId);
+        if (!"PAID".equals(order.getStatus())) {
+            throw new Exception("Đơn hàng này chưa thanh toán hoặc đã hoàn tiền rồi!");
+        }
+
+        // Hoàn tiền lại cho khách
+        String customerName = order.getCustomer().getUsername();
+        Long_Wallet customerWallet = getWallet(customerName);
+
+        BigDecimal refundAmount = order.getTotalAmount(); 
+
+        customerWallet.deposit(refundAmount);
+        walletDAO.update(customerWallet);
+
+        order.setStatus("REFUNDED");
+        orderDAO.update(order);
+
+        Long_Payment refundLog = new Long_Payment(order, "REFUND", refundAmount);
+        paymentDAO.save(refundLog);
     }
 
     private Dinh_User findUser(String username) {

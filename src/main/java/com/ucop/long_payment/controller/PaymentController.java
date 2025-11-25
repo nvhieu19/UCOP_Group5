@@ -69,11 +69,13 @@ public class PaymentController {
                 return;
             }
 
-            // 2. Tính toán chi tiết
+            // 2. Tính toán chi tiết (Đã có logic Smart Ship bên Service)
             double subTotal = order.getTotalAmount().doubleValue();
-            double tax = subTotal * 0.1;
-            double ship = 30000;
             double total = service.calculateFinalAmount(order, voucher);
+            
+            // Tính ngược lại các khoản phụ phí để hiển thị
+            double tax = subTotal * 0.1;
+            double ship = (subTotal >= 1000000) ? 0 : 30000; // Hiển thị đúng logic Free Ship
             double discount = (subTotal + tax + ship) - total;
 
             // 3. Hiển thị thông tin
@@ -82,13 +84,17 @@ public class PaymentController {
             lblDetail.setText(detail);
             lblFinalTotal.setText(df.format(total) + " VNĐ");
 
-            // 4. TẠO QR CODE (Dùng API Online)
-            // Nội dung QR: Chuyển khoản cho đơn hàng X số tiền Y
-            String qrContent = "PAY_ORDER_" + orderId + "_AMT_" + (long)total;
-            String qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + qrContent;
+            // 4. [MỚI] TẠO QR CODE CHUẨN NGÂN HÀNG (VietQR)
+            String bankId = "MB";       // Mã ngân hàng (VD: MB, VCB)
+            String accountNo = "0000123456789"; // Số tài khoản Admin
+            String template = "compact";
+            String addInfo = "Thanh toan don " + orderId; 
             
-            // Load ảnh từ Internet
-            imgQR.setImage(new Image(qrUrl, true)); // true = load background (không treo app)
+            // API VietQR xịn
+            String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-%s.png?amount=%d&addInfo=%s",
+                    bankId, accountNo, template, (long)total, addInfo.replace(" ", "%20"));
+            
+            imgQR.setImage(new Image(qrUrl, true));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -102,16 +108,37 @@ public class PaymentController {
             Long orderId = Long.parseLong(txtOrderId.getText());
             String voucher = txtVoucher.getText();
             
-            // Gọi Service xử lý thanh toán thật
             service.payOrder(currentUsername, orderId, voucher);
             
             showAlert("Thành công", "Thanh toán đơn hàng " + orderId + " hoàn tất!");
             
-            // Reset giao diện
-            loadData(); // Cập nhật số dư
+            loadData(); 
             txtOrderId.clear(); txtVoucher.clear();
             lblDetail.setText("..."); lblFinalTotal.setText("0 VNĐ"); imgQR.setImage(null);
             
+        } catch (Exception e) {
+            showAlert("Thất bại", e.getMessage());
+        }
+    }
+    
+    // Hàm xử lý nút Hoàn tiền
+    @FXML
+    public void handleRefund() {
+        try {
+            String orderIdText = txtOrderId.getText();
+            if (orderIdText == null || orderIdText.trim().isEmpty()) {
+                showAlert("Lỗi", "Vui lòng nhập Mã đơn hàng để hoàn tiền!");
+                return;
+            }
+            Long orderId = Long.parseLong(orderIdText);
+            
+            service.refundOrder(currentUsername, orderId);
+            
+            showAlert("Thành công", "Đã hoàn tiền 100% cho đơn hàng: " + orderId);
+            loadData(); 
+            
+        } catch (NumberFormatException e) {
+             showAlert("Lỗi", "Mã đơn hàng phải là số!");
         } catch (Exception e) {
             showAlert("Thất bại", e.getMessage());
         }
