@@ -112,7 +112,7 @@ public class DashboardController {
     
     // [MỚI] Nhật ký hoạt động (Của nhóm)
     @FXML public void showAuditLog() { 
-        // loadView("AuditView.fxml"); // Mở comment khi có file AuditView
+         loadView("AuditView.fxml"); 
         System.out.println("Chức năng Audit đang phát triển");
     } 
     
