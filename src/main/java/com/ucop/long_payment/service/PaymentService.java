@@ -1,6 +1,5 @@
 package com.ucop.long_payment.service;
 
-import com.ucop.core.dao.AbstractDAO;
 import com.ucop.dinh_admin.Dinh_User;
 import com.ucop.hieu_order.Hieu_Order;
 import com.ucop.hieu_order.dao.OrderDAO;
@@ -8,7 +7,6 @@ import com.ucop.long_payment.Long_Payment;
 import com.ucop.long_payment.Long_Wallet;
 import com.ucop.long_payment.dao.PaymentDAO;
 import com.ucop.long_payment.dao.WalletDAO;
-import com.ucop.quang_report.Quang_Promotion; 
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,136 +15,68 @@ public class PaymentService {
     private WalletDAO walletDAO = new WalletDAO();
     private PaymentDAO paymentDAO = new PaymentDAO();
     private OrderDAO orderDAO = new OrderDAO();
-    
-    // Dùng AbstractDAO để lấy Promotion của Quang nhanh gọn
-    private AbstractDAO<Quang_Promotion, Long> promoDAO = new AbstractDAO<Quang_Promotion, Long>() {};
 
-    // 1. Lấy ví
-    public Long_Wallet getWallet(String username) {
-        Dinh_User user = findUser(username);
-        if (user == null) return null;
+    // --- 1. CÁC HÀM CƠ BẢN (FIX LỖI CHO OrderListController) ---
+
+    // Lấy Ví của User (Nếu chưa có thì tự tạo mới 0đ)
+    public Long_Wallet getMyWallet(Dinh_User user) {
         Long_Wallet wallet = walletDAO.findByUserId(user.getId());
         if (wallet == null) {
-            wallet = new Long_Wallet(user, 0.0);
+            wallet = new Long_Wallet(user, 0); 
             walletDAO.save(wallet);
         }
         return wallet;
     }
 
-    // 2. Nạp tiền (Cơ bản)
-    public void deposit(String username, double amount) {
-        Long_Wallet wallet = getWallet(username);
-        if (wallet != null && amount > 0) {
-            wallet.deposit(BigDecimal.valueOf(amount));
-            walletDAO.update(wallet);
-        }
-    }
-
-    // 3. Lịch sử giao dịch
-    public List<Long_Payment> getHistory(String username) {
-        return paymentDAO.findByUsername(username);
-    }
-
-    // --- PHẦN NÂNG CAO: THANH TOÁN ĐƠN HÀNG ---
-
-    // Tìm đơn hàng chưa thanh toán của User
-    public Hieu_Order findPendingOrder(String username, Long orderId) {
-        Hieu_Order order = orderDAO.findById(orderId);
-        if (order != null && order.getCustomer().getUsername().equals(username) 
-                && !"PAID".equals(order.getStatus())) {
-            return order;
-        }
-        return null;
-    }
-
-    // Tính toán số tiền cuối cùng (Kèm Thuế, Ship THÔNG MINH, Voucher)
-    public double calculateFinalAmount(Hieu_Order order, String voucherCode) throws Exception {
-        double subTotal = order.getTotalAmount().doubleValue();
-        double tax = subTotal * 0.1; // Thuế 10%
-        
-        // --- [MỚI] LOGIC SHIP THÔNG MINH ---
-        // Đơn hàng >= 1 triệu -> Miễn phí Ship (0đ)
-        // Đơn hàng < 1 triệu -> Phí Ship 30.000đ
-        double ship = 30000;
-        if (subTotal >= 1000000) {
-            ship = 0; 
-        }
-        // ----------------------------------
-
-        double discount = 0;
-
-        // Check Voucher của Quang
-        if (voucherCode != null && !voucherCode.isEmpty()) {
-            List<Quang_Promotion> promos = promoDAO.findAll();
-            for (Quang_Promotion p : promos) {
-                if (p.getCode().equalsIgnoreCase(voucherCode)) {
-                    // Logic: Giảm giá trực tiếp (FIXED)
-                    discount = p.getDiscountValue();
-                    break;
-                }
-            }
-        }
-
-        double finalAmount = subTotal + tax + ship - discount;
-        return finalAmount > 0 ? finalAmount : 0;
-    }
-
-    // Thực hiện thanh toán
-    public void payOrder(String username, Long orderId, String voucherCode) throws Exception {
-        Long_Wallet wallet = getWallet(username);
-        Hieu_Order order = findPendingOrder(username, orderId);
-
-        if (order == null) throw new Exception("Không tìm thấy đơn hàng hoặc đơn đã thanh toán!");
-
-        // Tính tiền
-        double finalAmount = calculateFinalAmount(order, voucherCode);
-
-        // Kiểm tra số dư
-        if (wallet.getBalance().doubleValue() < finalAmount) {
-            throw new Exception("Số dư ví không đủ! Cần: " + finalAmount);
-        }
-
-        // 1. Trừ tiền ví
-        wallet.setBalance(wallet.getBalance().subtract(BigDecimal.valueOf(finalAmount)));
+    // Nạp tiền vào ví
+    public void deposit(Dinh_User user, double amount) {
+        Long_Wallet wallet = getMyWallet(user);
+        wallet.deposit(BigDecimal.valueOf(amount));
         walletDAO.update(wallet);
+    }
 
-        // 2. Cập nhật trạng thái đơn hàng thành PAID (Của Hiếu)
-        order.setStatus("PAID");
-        orderDAO.update(order);
+    // Cập nhật số dư ví (Sau khi trừ tiền) - OrderListController cần hàm này
+    public void updateWallet(Long_Wallet wallet) {
+        walletDAO.update(wallet);
+    }
 
-        // 3. Lưu lịch sử giao dịch
-        Long_Payment payment = new Long_Payment(order, "WALLET_QR", BigDecimal.valueOf(finalAmount));
+    // Lưu lịch sử giao dịch
+    public void savePayment(Long_Payment payment) {
         paymentDAO.save(payment);
     }
 
-    // --- CHỨC NĂNG HOÀN TIỀN (REFUND) ---
-    public void refundOrder(String adminUsername, Long orderId) throws Exception {
+    // Lấy lịch sử giao dịch (Cho PaymentController)
+    public List<Long_Payment> getMyHistory(Dinh_User user) {
+        return paymentDAO.findByUserId(user.getId());
+    }
+
+    // --- 2. TÍNH NĂNG NÂNG CAO: HOÀN TIỀN (REFUND) ---
+    // Dành cho Staff/Admin thực hiện khi đơn hàng bị hủy
+    public void refundOrder(Long orderId) throws Exception {
         Hieu_Order order = orderDAO.findById(orderId);
         
         if (order == null) throw new Exception("Không tìm thấy đơn hàng ID: " + orderId);
+        
+        // Chỉ hoàn tiền nếu đơn đã thanh toán
         if (!"PAID".equals(order.getStatus())) {
-            throw new Exception("Đơn hàng này chưa thanh toán hoặc đã hoàn tiền rồi!");
+            throw new Exception("Đơn hàng này chưa thanh toán (hoặc đã hoàn tiền), không thể Refund!");
         }
 
-        // Hoàn tiền lại cho khách
-        String customerName = order.getCustomer().getUsername();
-        Long_Wallet customerWallet = getWallet(customerName);
+        // 1. Lấy ví khách hàng
+        Dinh_User customer = order.getCustomer();
+        Long_Wallet customerWallet = getMyWallet(customer);
 
+        // 2. Cộng lại tiền vào ví
         BigDecimal refundAmount = order.getTotalAmount(); 
-
         customerWallet.deposit(refundAmount);
         walletDAO.update(customerWallet);
 
+        // 3. Đổi trạng thái đơn hàng
         order.setStatus("REFUNDED");
         orderDAO.update(order);
 
+        // 4. Ghi log giao dịch hoàn tiền
         Long_Payment refundLog = new Long_Payment(order, "REFUND", refundAmount);
         paymentDAO.save(refundLog);
-    }
-
-    private Dinh_User findUser(String username) {
-        return new AbstractDAO<Dinh_User, Long>(){}.findAll().stream()
-                .filter(u -> u.getUsername().equals(username))
-                .findFirst().orElse(null);
     }
 }

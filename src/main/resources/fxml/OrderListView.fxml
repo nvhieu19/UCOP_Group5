@@ -20,8 +20,6 @@
          <Label text="Trạng thái:" />
          <ComboBox fx:id="cbStatus" promptText="Tất cả" prefWidth="150.0" />
          <Button text="Lọc" onAction="#handleFilter" />
-         
-         <Label maxWidth="Infinity" HBox.hgrow="ALWAYS" /> <Button text="Thanh toán đơn này (SV4)" onAction="#handlePayOrder" style="-fx-background-color: #27ae60; -fx-text-fill: white;" />
       </HBox>
 
       <TableView fx:id="tableOrders" VBox.vgrow="ALWAYS">

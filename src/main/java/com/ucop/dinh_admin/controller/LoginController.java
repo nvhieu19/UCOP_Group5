@@ -2,6 +2,7 @@ package com.ucop.dinh_admin.controller;
 
 import com.ucop.dinh_admin.Dinh_User;
 import com.ucop.dinh_admin.service.UserService;
+import com.ucop.dinh_admin.service.SessionManager; // Thêm import
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -31,6 +32,9 @@ public class LoginController {
         Dinh_User user = userService.login(u, p);
 
         if (user != null) {
+            // LƯU USER VÀO SESSION
+            SessionManager.getInstance().setCurrentUser(user);
+
             try {
                 // 1. Load file giao diện Dashboard
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Dashboard.fxml"));

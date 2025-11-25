@@ -1,153 +1,181 @@
 package com.ucop.long_payment.controller;
 
+import com.ucop.dinh_admin.Dinh_User;
+import com.ucop.dinh_admin.service.SessionManager;
 import com.ucop.hieu_order.Hieu_Order;
+import com.ucop.hieu_order.dao.OrderDAO;
 import com.ucop.long_payment.Long_Payment;
 import com.ucop.long_payment.Long_Wallet;
 import com.ucop.long_payment.service.PaymentService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import java.text.DecimalFormat;
+import javafx.util.StringConverter;
+
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
 
 public class PaymentController {
 
+    // --- FXML Components ---
     @FXML private Label lblBalance;
     @FXML private TextField txtDeposit;
     @FXML private TableView<Long_Payment> tableHistory;
-    
-    // Phần nâng cao
-    @FXML private TextField txtOrderId;
-    @FXML private TextField txtVoucher;
-    @FXML private Label lblDetail;
-    @FXML private Label lblFinalTotal;
-    @FXML private ImageView imgQR;
 
-    private PaymentService service = new PaymentService();
-    private String currentUsername; 
-    private DecimalFormat df = new DecimalFormat("#,###");
+    // Components mới cho thanh toán đơn hàng
+    @FXML private ComboBox<Hieu_Order> cbOrdersToPay;
+    @FXML private Label lblOrderTotal;
+    @FXML private Button btnPayByWallet;
+    @FXML private Button btnPayCOD;
 
-    public void setUsername(String username) {
-        this.currentUsername = username;
-        loadData();
+    // --- Services & DAOs ---
+    private PaymentService paymentService = new PaymentService();
+    private OrderDAO orderDAO = new OrderDAO();
+    private Dinh_User currentUser;
+    private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+
+    @FXML
+    public void initialize() {
+        // Lấy người dùng hiện tại từ SessionManager
+        currentUser = SessionManager.getInstance().getCurrentUser();
+
+        if (currentUser == null) {
+            showError("Lỗi", "Không thể xác định người dùng. Vui lòng đăng nhập lại.");
+            // Vô hiệu hóa toàn bộ giao diện nếu không có user
+            lblBalance.getScene().getRoot().setDisable(true);
+            return;
+        }
+
+        setupOrderComboBox();
+        loadWalletData();
+        loadUnpaidOrders();
+        loadPaymentHistory();
     }
 
-    private void loadData() {
-        if (currentUsername == null) return;
-        Long_Wallet wallet = service.getWallet(currentUsername);
-        if (wallet != null) {
-            lblBalance.setText(df.format(wallet.getBalance()) + " VNĐ");
-        }
-        tableHistory.setItems(FXCollections.observableArrayList(service.getHistory(currentUsername)));
+    private void setupOrderComboBox() {
+        // Hiển thị thông tin tóm tắt của đơn hàng trong ComboBox
+        cbOrdersToPay.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Hieu_Order order) {
+                if (order == null) return null;
+                return String.format("Đơn #%d - Ngày: %s - Tổng: %s",
+                        order.getId(), order.getOrderDate(), currencyFormatter.format(order.getTotalAmount()));
+            }
+
+            @Override
+            public Hieu_Order fromString(String string) {
+                return null; // Không cần thiết
+            }
+        });
+
+        // Cập nhật tổng tiền khi chọn một đơn hàng
+        cbOrdersToPay.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                lblOrderTotal.setText("Tổng tiền: " + currencyFormatter.format(newVal.getTotalAmount()));
+            } else {
+                lblOrderTotal.setText("Tổng tiền: 0 VNĐ");
+            }
+        });
+    }
+
+    private void loadWalletData() {
+        Long_Wallet wallet = paymentService.getMyWallet(currentUser);
+        lblBalance.setText(currencyFormatter.format(wallet.getBalance()));
+    }
+
+    private void loadUnpaidOrders() {
+        List<String> statusesToFind = List.of("PENDING_PAYMENT", "PLACED");
+        List<Hieu_Order> unpaidOrders = orderDAO.findOrdersByStatusAndUser(statusesToFind, currentUser.getId());
+        cbOrdersToPay.setItems(FXCollections.observableArrayList(unpaidOrders));
+    }
+
+    private void loadPaymentHistory() {
+        List<Long_Payment> history = paymentService.getMyHistory(currentUser);
+        tableHistory.setItems(FXCollections.observableArrayList(history));
     }
 
     @FXML
-    public void handleDeposit() {
+    private void handleDeposit() {
         try {
             double amount = Double.parseDouble(txtDeposit.getText());
-            service.deposit(currentUsername, amount);
+            if (amount <= 0) {
+                showError("Lỗi", "Số tiền nạp phải lớn hơn 0.");
+                return;
+            }
+            paymentService.deposit(currentUser, amount);
             txtDeposit.clear();
-            loadData();
-            showAlert("Thành công", "Nạp tiền thành công!");
-        } catch (Exception e) {
-            showAlert("Lỗi", "Số tiền không hợp lệ!");
-        }
-    }
-
-    // --- XỬ LÝ THANH TOÁN ĐƠN HÀNG & QR ---
-    @FXML
-    public void handleCheckOrder() {
-        try {
-            Long orderId = Long.parseLong(txtOrderId.getText());
-            String voucher = txtVoucher.getText();
-
-            // 1. Tìm đơn hàng
-            Hieu_Order order = service.findPendingOrder(currentUsername, orderId);
-            if (order == null) {
-                showAlert("Lỗi", "Không tìm thấy đơn hàng ID " + orderId + " (hoặc đã trả rồi)!");
-                return;
-            }
-
-            // 2. Tính toán chi tiết (Đã có logic Smart Ship bên Service)
-            double subTotal = order.getTotalAmount().doubleValue();
-            double total = service.calculateFinalAmount(order, voucher);
-            
-            // Tính ngược lại các khoản phụ phí để hiển thị
-            double tax = subTotal * 0.1;
-            double ship = (subTotal >= 1000000) ? 0 : 30000; // Hiển thị đúng logic Free Ship
-            double discount = (subTotal + tax + ship) - total;
-
-            // 3. Hiển thị thông tin
-            String detail = String.format("Tiền hàng: %s\nThuế (10%%): %s\nShip: %s\nGiảm giá: -%s", 
-                    df.format(subTotal), df.format(tax), df.format(ship), df.format(discount));
-            lblDetail.setText(detail);
-            lblFinalTotal.setText(df.format(total) + " VNĐ");
-
-            // 4. [MỚI] TẠO QR CODE CHUẨN NGÂN HÀNG (VietQR)
-            String bankId = "MB";       // Mã ngân hàng (VD: MB, VCB)
-            String accountNo = "0000123456789"; // Số tài khoản Admin
-            String template = "compact";
-            String addInfo = "Thanh toan don " + orderId; 
-            
-            // API VietQR xịn
-            String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-%s.png?amount=%d&addInfo=%s",
-                    bankId, accountNo, template, (long)total, addInfo.replace(" ", "%20"));
-            
-            imgQR.setImage(new Image(qrUrl, true));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Lỗi", "Kiểm tra lại Mã đơn hàng (Phải là số)!");
-        }
-    }
-
-    @FXML
-    public void handlePay() {
-        try {
-            Long orderId = Long.parseLong(txtOrderId.getText());
-            String voucher = txtVoucher.getText();
-            
-            service.payOrder(currentUsername, orderId, voucher);
-            
-            showAlert("Thành công", "Thanh toán đơn hàng " + orderId + " hoàn tất!");
-            
-            loadData(); 
-            txtOrderId.clear(); txtVoucher.clear();
-            lblDetail.setText("..."); lblFinalTotal.setText("0 VNĐ"); imgQR.setImage(null);
-            
-        } catch (Exception e) {
-            showAlert("Thất bại", e.getMessage());
-        }
-    }
-    
-    // Hàm xử lý nút Hoàn tiền
-    @FXML
-    public void handleRefund() {
-        try {
-            String orderIdText = txtOrderId.getText();
-            if (orderIdText == null || orderIdText.trim().isEmpty()) {
-                showAlert("Lỗi", "Vui lòng nhập Mã đơn hàng để hoàn tiền!");
-                return;
-            }
-            Long orderId = Long.parseLong(orderIdText);
-            
-            service.refundOrder(currentUsername, orderId);
-            
-            showAlert("Thành công", "Đã hoàn tiền 100% cho đơn hàng: " + orderId);
-            loadData(); 
-            
+            loadWalletData(); // Cập nhật lại số dư
+            showInfo("Thành công", "Nạp tiền thành công!");
         } catch (NumberFormatException e) {
-             showAlert("Lỗi", "Mã đơn hàng phải là số!");
-        } catch (Exception e) {
-            showAlert("Thất bại", e.getMessage());
+            showError("Lỗi", "Vui lòng nhập một số hợp lệ.");
         }
     }
 
-    private void showAlert(String title, String content) {
+    @FXML
+    private void handlePayByWallet() {
+        Hieu_Order selectedOrder = cbOrdersToPay.getSelectionModel().getSelectedItem();
+        if (selectedOrder == null) {
+            showError("Lỗi", "Vui lòng chọn một đơn hàng để thanh toán.");
+            return;
+        }
+
+        Long_Wallet wallet = paymentService.getMyWallet(currentUser);
+        BigDecimal total = selectedOrder.getTotalAmount();
+
+        if (wallet.getBalance().compareTo(total) < 0) {
+            showError("Thanh toán thất bại", "Số dư trong ví không đủ. Vui lòng nạp thêm tiền.");
+            return;
+        }
+
+        // Trừ tiền và cập nhật
+        wallet.deduct(total);
+        paymentService.updateWallet(wallet);
+
+        // Cập nhật trạng thái đơn hàng và lưu lịch sử
+        selectedOrder.setStatus("PAID");
+        orderDAO.update(selectedOrder);
+        paymentService.savePayment(new Long_Payment(selectedOrder, "WALLET", total));
+
+        showInfo("Thành công", "Thanh toán đơn hàng #" + selectedOrder.getId() + " thành công!");
+        refreshAllData();
+    }
+
+    @FXML
+    private void handlePayCOD() {
+        Hieu_Order selectedOrder = cbOrdersToPay.getSelectionModel().getSelectedItem();
+        if (selectedOrder == null) {
+            showError("Lỗi", "Vui lòng chọn một đơn hàng để thanh toán.");
+            return;
+        }
+
+        selectedOrder.setStatus("COD"); // Chuyển trạng thái sang chờ giao hàng thu tiền
+        orderDAO.update(selectedOrder);
+
+        showInfo("Thành công", "Đơn hàng #" + selectedOrder.getId() + " đã được xác nhận thanh toán khi nhận hàng (COD).");
+        refreshAllData();
+    }
+
+    private void refreshAllData() {
+        loadWalletData();
+        loadUnpaidOrders();
+        loadPaymentHistory();
+    }
+
+    private void showError(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showInfo(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
-        alert.setContentText(content);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
         alert.showAndWait();
     }
 }

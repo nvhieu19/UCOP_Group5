@@ -6,17 +6,22 @@ import org.hibernate.Session;
 import org.hibernate.query.Query;
 import java.util.List;
 
-// Class này chuyên dùng để lấy lịch sử giao dịch từ Database
 public class PaymentDAO extends AbstractDAO<Long_Payment, Long> {
     
-    // Hàm tìm tất cả giao dịch của 1 user (username)
-    public List<Long_Payment> findByUsername(String username) {
+    // Hàm tìm lịch sử thanh toán dựa trên ID người dùng
+    // Logic: Tìm các Payment -> Thuộc về Order -> Của Customer có ID là ...
+    public List<Long_Payment> findByUserId(Long userId) {
         try (Session session = getSession()) {
-            // Lệnh này tìm trong bảng Payment, dựa vào username của người đặt đơn hàng
-            String hql = "SELECT p FROM Long_Payment p WHERE p.order.customer.username = :u ORDER BY p.paymentDate DESC";
+            // Câu lệnh HQL: Join bảng Payment với bảng Order để lọc theo User
+            String hql = "SELECT p FROM Long_Payment p JOIN p.order o WHERE o.customer.id = :uid ORDER BY p.paymentDate DESC";
+            
             Query<Long_Payment> query = session.createQuery(hql, Long_Payment.class);
-            query.setParameter("u", username);
+            query.setParameter("uid", userId);
+            
             return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }

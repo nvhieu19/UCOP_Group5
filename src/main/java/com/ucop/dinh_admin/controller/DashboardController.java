@@ -8,9 +8,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import java.io.IOException;
-
-// [MỚI] Import Controller của Long (Payment)
-import com.ucop.long_payment.controller.PaymentController;
+import java.net.URL;
 
 public class DashboardController {
 
@@ -20,23 +18,25 @@ public class DashboardController {
     @FXML 
     private BorderPane mainPane; 
 
-    // [MỚI] Biến để lưu username người dùng đang đăng nhập
-    private String currentUsername;
-
     // Hàm nhận dữ liệu từ Login
     public void setUsername(String username) {
-        this.currentUsername = username;
         lblWelcome.setText("Xin chào, " + username + "!");
     }
 
-    // --- HÀM TIỆN ÍCH LOAD VIEW (Giữ lại để dùng cho các nút khác) ---
+    // --- HÀM TIỆN ÍCH LOAD VIEW ---
     private void loadView(String fxmlFile) {
         try {
-            Parent view = FXMLLoader.load(getClass().getResource("/fxml/" + fxmlFile));
-            mainPane.setCenter(view);
+            URL fxmlUrl = getClass().getResource("/fxml/" + fxmlFile);
+            if (fxmlUrl == null) {
+                // If the file is not found, show an error message instead of crashing.
+                lblWelcome.setText("Lỗi: Không tìm thấy file " + fxmlFile + " trong thư mục /fxml/");
+                mainPane.setCenter(null); // Clear the center pane
+            } else {
+                Parent view = FXMLLoader.load(fxmlUrl);
+                mainPane.setCenter(view);
+            }
         } catch (IOException e) {
             e.printStackTrace();
-            lblWelcome.setText("Lỗi: Không tìm thấy file " + fxmlFile + " trong thư mục /fxml/");
         }
     }
 
@@ -54,27 +54,14 @@ public class DashboardController {
 
     @FXML
     public void showOrder() {
+        // Đã sửa tên file cho khớp với hướng dẫn trước (CartView.fxml)
         loadView("CartView.fxml");
     }
 
-    // [QUAN TRỌNG] Hàm mở chức năng Payment của Long (Code xịn)
     @FXML
     public void showPayment() {
-        try {
-            // 1. Load giao diện từ file FXML của Long
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/PaymentView.fxml"));
-            Parent view = loader.load();
-
-            // 2. Lấy Controller của Long để truyền username sang
-            PaymentController paymentCtrl = loader.getController();
-            paymentCtrl.setUsername(currentUsername);
-
-            // 3. Hiển thị lên màn hình chính
-            mainPane.setCenter(view);
-        } catch (IOException e) {
-            e.printStackTrace();
-            lblWelcome.setText("Lỗi: Không tìm thấy file PaymentView.fxml hoặc lỗi code Controller!");
-        }
+        // Sắp làm: PaymentView.fxml
+        loadView("PaymentView.fxml");
     }
 
     @FXML
@@ -85,17 +72,26 @@ public class DashboardController {
     @FXML
     public void handleLogout() {
         try {
-            Stage stage = (Stage) lblWelcome.getScene().getWindow();
+            // SỬA Ở ĐÂY: Dùng mainPane thay vì lblWelcome
+            // mainPane là khung gốc, lúc nào cũng có mặt trên cửa sổ
+            if (mainPane.getScene() == null) {
+                System.out.println("Lỗi: MainPane chưa được gắn vào Scene");
+                return;
+            }
+
+            Stage stage = (Stage) mainPane.getScene().getWindow();
+            
+            // Load lại màn hình Login
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
             stage.setScene(new Scene(root));
             stage.centerOnScreen();
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    
     @FXML
     public void showOrderList() {
         loadView("OrderListView.fxml");
     }
-}
+} 

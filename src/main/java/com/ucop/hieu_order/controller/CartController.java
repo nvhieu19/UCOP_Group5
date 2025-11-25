@@ -5,6 +5,7 @@ import com.ucop.hieu_order.Hieu_Order;
 import com.ucop.hieu_order.Hieu_OrderItem;
 import com.ucop.hieu_order.service.OrderService;
 import com.ucop.dinh_admin.Dinh_User;
+import com.ucop.dinh_admin.service.SessionManager;
 import com.ucop.dinh_admin.service.UserService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -101,28 +102,23 @@ public class CartController {
             showAlert("Lỗi", "Giỏ hàng trống!");
             return;
         }
-        try {
-            UserService userService = new UserService();
-            // 1. Thử lấy user 'admin_dinh'
-            Dinh_User customer = userService.login("admin_dinh", "123456");
-            
-            // 2. Nếu không có admin, thử lấy user 'guest'
-            if (customer == null) {
-                // Thay vì tạo mới ngay, hãy thử login bằng 'guest' trước
-                customer = userService.login("guest", "123");
-            }
-            
-            // 3. Nếu vẫn không có 'guest' trong DB, lúc này mới tạo mới
-            if (customer == null) {
-                customer = new Dinh_User("guest", "123", "ACTIVE");
-                // Lưu ý: OrderService sẽ lo phần save user mới này
-            }
 
-            orderService.createOrder(currentOrder, customer);
+        // Lấy người dùng hiện tại từ session
+        Dinh_User currentUser = SessionManager.getInstance().getCurrentUser();
+
+        // Kiểm tra xem người dùng đã đăng nhập chưa
+        if (currentUser == null) {
+            showAlert("Lỗi", "Bạn cần đăng nhập để tạo đơn hàng!");
+            return;
+        }
+
+        try {
+            // Tạo đơn hàng cho người dùng hiện tại
+            orderService.createOrder(currentOrder, currentUser);
             
             showAlert("Thành công", "Đã tạo đơn hàng (Trạng thái: PLACED)!\nTổng tiền: " + lblGrandTotal.getText());
             
-            // Reset form
+            // Reset form sau khi thanh toán thành công
             currentOrder = new Hieu_Order();
             cartItems.clear();
             txtPromoCode.clear();
