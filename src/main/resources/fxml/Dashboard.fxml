@@ -9,7 +9,7 @@
 
 <BorderPane fx:id="mainPane" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.dinh_admin.controller.DashboardController">
    <top>
-      <Label text="UCOP DASHBOARD - QUẢN LÝ TỔNG HỢP" BorderPane.alignment="CENTER">
+      <Label text="DASHBOARD - QUẢN LÝ TỔNG HỢP" BorderPane.alignment="CENTER">
          <font>
             <Font name="System Bold" size="24.0" />
          </font>
