@@ -206,35 +206,35 @@ public class UserMgmtController {
     @FXML
     public void handleDelete() {
         Dinh_User selected = tableUsers.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            // FIX: Kiểm tra quyền admin
-            Dinh_User current = SessionManager.getInstance().getCurrentUser();
-            if (!hasAdminRole(current)) {
-                showAlert("Lỗi", "Chỉ Admin mới được xóa user!");
-                return;
-            }
+        
+        if (selected == null) {
+            showAlert("Chú ý", "Vui lòng chọn user cần xóa!");
+            return;
+        }
 
-            // Kiểm tra không được xóa chính mình
-            if (selected.getId().equals(current.getId())) {
-                showAlert("Lỗi", "Không thể xóa tài khoản của chính mình!");
-                return;
-            }
+        // Hỏi xác nhận trước khi xóa cho chắc
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Bạn có chắc muốn xóa user: " + selected.getUsername() + " ?", ButtonType.YES, ButtonType.NO);
+        confirm.showAndWait();
 
-            try {
-                // Xóa user
-                new com.ucop.dinh_admin.dao.UserDAO().delete(selected.getId());
-                
-                // Ghi audit log
-                userService.recordAudit("DELETE", current.getUsername(), "users", "Deleted user: " + selected.getUsername());
-                
+        if (confirm.getResult() == ButtonType.YES) {
+            // Lấy tên Admin đang đăng nhập
+            String currentAdmin = SessionManager.getInstance().getCurrentUser().getUsername();
+
+            // GỌI SERVICE ĐỂ XÓA
+            String result = userService.deleteUser(selected.getId(), currentAdmin);
+
+            if ("OK".equals(result)) {
+                // Nếu xóa thành công
                 loadData();
                 showAlert("Thành công", "Đã xóa user: " + selected.getUsername());
-            } catch (Exception e) {
-                e.printStackTrace();
-                showAlert("Lỗi", "Không thể xóa user: " + e.getMessage());
+            } else {
+                // Nếu xóa thất bại (do dính đơn hàng)
+                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                errorAlert.setTitle("Lỗi xóa dữ liệu");
+                errorAlert.setHeaderText("Không thể xóa user này!");
+                errorAlert.setContentText(result); // Hiện lý do cụ thể
+                errorAlert.showAndWait();
             }
-        } else {
-            showAlert("Cảnh báo", "Vui lòng chọn user để xóa!");
         }
     }
 

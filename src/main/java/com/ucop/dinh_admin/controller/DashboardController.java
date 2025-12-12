@@ -94,6 +94,7 @@ public class DashboardController {
             // Staff chỉ thấy: Quản lý danh mục (Category), Quản lý kho & sản phẩm (Product)
             // ❌ KHÔNG thấy Shipment (chỉ ADMIN)
             showButton(btnCategory);
+            showButton(btnOrder);
             showButton(btnProduct);
             return;
         }
@@ -101,7 +102,6 @@ public class DashboardController {
         if (isCustomer) {
             // Customer chỉ thấy: Giỏ hàng, Danh sách đơn hàng (chỉ của bản thân), Thanh toán
             showButton(btnCart);
-            showButton(btnOrder);
             showButton(btnPayment);
             return;
         }
