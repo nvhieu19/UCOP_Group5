@@ -12,6 +12,7 @@ import com.opencsv.CSVReaderBuilder;
 import java.io.*; 
 import java.nio.charset.StandardCharsets; 
 import java.util.List;
+import java.math.BigDecimal; // [MỚI] Thêm thư viện này để xử lý giá tiền
 
 public class CatalogService {
     private ItemDAO itemDAO = new ItemDAO();
@@ -60,7 +61,7 @@ public class CatalogService {
     public void updateCategory(Hai_Category category) { categoryDAO.update(category); }
     public void deleteCategory(Long categoryId) { categoryDAO.delete(categoryId); }
 
-    // --- CHỨC NĂNG IMPORT / EXPORT CSV (DÙNG DẤU CHẤM PHẨY ';') ---
+    // --- CHỨC NĂNG IMPORT / EXPORT CSV (DÙNG DẤU PHẨY ',' CHUẨN QUỐC TẾ) ---
 
     public void exportProductsToCSV(String filePath) throws IOException {
         List<Hai_Item> items = getAllItems();
@@ -70,11 +71,8 @@ public class CatalogService {
             fos.write(new byte[] { (byte)0xEF, (byte)0xBB, (byte)0xBF });
 
             try (OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
-                 // [SỬA LẦN CUỐI] Dùng dấu chấm phẩy (;) - Chuẩn Excel Việt Nam
-                 CSVWriter writer = new CSVWriter(osw, ';', 
-                                                  CSVWriter.NO_QUOTE_CHARACTER, 
-                                                  CSVWriter.DEFAULT_ESCAPE_CHARACTER, 
-                                                  CSVWriter.DEFAULT_LINE_END)) {
+                 // Dùng constructor mặc định: Tự động dùng dấu phẩy (,) và bao ngoặc kép (")
+                 CSVWriter writer = new CSVWriter(osw)) { 
 
                 String[] header = { "SKU", "Tên Sản phẩm", "Giá", "Tồn kho", "Danh mục" };
                 writer.writeNext(header);
@@ -83,7 +81,8 @@ public class CatalogService {
                     String[] data = {
                         item.getSku(),
                         item.getName(),
-                        item.getPrice().toBigInteger().toString(), 
+                        // Format giá tiền: bỏ phần thập phân .00 nếu tròn
+                        item.getPrice() != null ? String.format("%.0f", item.getPrice()) : "0", 
                         String.valueOf(item.getStockQuantity()), 
                         item.getCategory() != null ? item.getCategory().getName() : ""
                     };
@@ -94,34 +93,72 @@ public class CatalogService {
     }
 
     public void importProductsFromCSV(String filePath) throws Exception {
-        // [SỬA LẦN CUỐI] Cấu hình Parser để hiểu dấu chấm phẩy (;)
-        CSVParser parser = new CSVParserBuilder().withSeparator(';').build();
+        // Lấy danh sách sản phẩm hiện có để kiểm tra trùng SKU (Tránh query DB nhiều lần)
+        List<Hai_Item> existingItems = getAllItems();
 
         try (InputStreamReader isr = new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8);
-             CSVReader reader = new CSVReaderBuilder(isr).withCSVParser(parser).build()) {
+             // Bỏ qua dòng Header
+             CSVReader reader = new CSVReaderBuilder(isr).withSkipLines(1).build()) {
              
             String[] line;
-            reader.readNext(); // Bỏ qua Header
-
             while ((line = reader.readNext()) != null) {
+                // Kiểm tra dòng lỗi (không đủ 4 cột bắt buộc)
                 if (line.length < 4) continue; 
 
-                String sku = line[0];
-                String name = line[1];
+                // Đọc và làm sạch dữ liệu
+                String sku = line[0].trim();
+                String name = line[1].trim();
                 
                 double price = 0;
-                try { price = Double.parseDouble(line[2].trim()); } catch (Exception e) {}
+                try { 
+                    // Xử lý giá: thay dấu phẩy thành chấm (nếu người dùng nhập kiểu Việt Nam 10,5)
+                    price = Double.parseDouble(line[2].trim().replace(",", ".")); 
+                } catch (Exception e) {}
 
                 int stock = 0;
                 try { stock = Integer.parseInt(line[3].trim()); } catch (Exception e) {}
                 
-                Hai_Item newItem = new Hai_Item(sku, name, price, "Cái", "");
-                newItem.setCategory(getDefaultCategory());
+                // --- LOGIC: KIỂM TRA TỒN TẠI (UPSERT) ---
+                
+                Hai_Item foundItem = null;
+                // Tìm trong danh sách hiện có
+                for (Hai_Item item : existingItems) {
+                    if (item.getSku().equalsIgnoreCase(sku)) {
+                        foundItem = item;
+                        break;
+                    }
+                }
 
-                try {
-                    addItem(newItem, stock);
-                } catch (Exception e) {
-                    System.err.println("Lỗi nhập dòng SKU " + sku + ": " + e.getMessage());
+                if (foundItem != null) {
+                    // === TRƯỜNG HỢP 1: ĐÃ CÓ -> CẬP NHẬT (UPDATE) ===
+                    foundItem.setName(name);
+                    foundItem.setPrice(BigDecimal.valueOf(price));
+                    
+                    // Cập nhật tồn kho (nếu có thông tin kho)
+                    if (foundItem.getStockItem() != null) {
+                        foundItem.getStockItem().setOnHand(stock);
+                    }
+                    
+                    try {
+                        updateItem(foundItem);
+                        System.out.println("Đã cập nhật: " + sku);
+                    } catch (Exception e) {
+                        System.err.println("Lỗi cập nhật " + sku + ": " + e.getMessage());
+                    }
+
+                } else {
+                    // === TRƯỜNG HỢP 2: CHƯA CÓ -> THÊM MỚI (INSERT) ===
+                    Hai_Item newItem = new Hai_Item(sku, name, price, "Cái", "");
+                    newItem.setCategory(getDefaultCategory());
+
+                    try {
+                        addItem(newItem, stock);
+                        // Thêm vào list tạm để các dòng sau trong cùng file check được trùng
+                        existingItems.add(newItem); 
+                        System.out.println("Đã thêm mới: " + sku);
+                    } catch (Exception e) {
+                        System.err.println("Lỗi thêm mới " + sku + ": " + e.getMessage());
+                    }
                 }
             }
         }
