@@ -4,6 +4,7 @@ import com.ucop.core.dao.AbstractDAO;
 import com.ucop.dinh_admin.Dinh_User;
 import com.ucop.hieu_order.Hieu_Order;
 import com.ucop.hieu_order.dao.OrderDAO;
+import com.ucop.hieu_order.service.ShipmentService;
 import com.ucop.long_payment.Long_Payment;
 import com.ucop.long_payment.Long_Wallet;
 import com.ucop.long_payment.dao.PaymentDAO;
@@ -17,6 +18,7 @@ public class PaymentService {
     private WalletDAO walletDAO = new WalletDAO();
     private PaymentDAO paymentDAO = new PaymentDAO();
     private OrderDAO orderDAO = new OrderDAO();
+    private ShipmentService shipmentService = new ShipmentService();
     
     // Dùng AbstractDAO để lấy Promotion của Quang nhanh gọn
     private AbstractDAO<Quang_Promotion, Long> promoDAO = new AbstractDAO<Quang_Promotion, Long>() {};
@@ -106,7 +108,7 @@ public class PaymentService {
         return calculateFinalAmount(order, voucherCode, 30000);
     }
 
-    // --- THANH TOÁN BẰNG VÍ (Gọn nhẹ, không tạo Shipment) ---
+    // --- THANH TOÁN BẰNG VÍ (Gọn nhẹ, TẠUTO SHIPMENT) ---
     public void payOrder(String username, Long orderId, String voucherCode, double shippingFee, String address) throws Exception {
         Long_Wallet wallet = getWallet(username);
         Hieu_Order order = findPendingOrder(username, orderId);
@@ -125,13 +127,18 @@ public class PaymentService {
         wallet.setBalance(wallet.getBalance().subtract(BigDecimal.valueOf(finalAmount)));
         walletDAO.update(wallet);
 
-        // 2. Đổi trạng thái -> SHIPPED (Đang vận chuyển)
-        order.setStatus("SHIPPED");
+        // 2. Đổi trạng thái -> PAID (Đã thanh toán)
+        order.setStatus("PAID");
         orderDAO.update(order);
 
         // 3. Lưu lịch sử giao dịch
         Long_Payment payment = new Long_Payment(order, "WALLET_QR", BigDecimal.valueOf(finalAmount));
         paymentDAO.save(payment);
+
+        // ✅ FIX: TỰ ĐỘNG TẠO SHIPMENT SAU THANH TOÁN THÀNH CÔNG
+        if (address != null && !address.isEmpty()) {
+            shipmentService.createShipment(orderId, "Giao Tiêu Chuẩn", address, null);
+        }
     }
     
     // Các hàm overload giữ nguyên để tương thích
@@ -142,17 +149,22 @@ public class PaymentService {
         payOrder(username, orderId, voucherCode, 30000);
     }
 
-    // --- THANH TOÁN NGÂN HÀNG (QR) ---
+    // --- THANH TOÁN NGÂN HÀNG (QR) - TỰ ĐỘNG TẠO SHIPMENT ---
     public void payByBankTransfer(String username, Long orderId, double amount, String address) throws Exception {
         Hieu_Order order = findPendingOrder(username, orderId);
         if (order == null) throw new Exception("Đơn hàng không hợp lệ!");
 
-        // Chỉ đổi trạng thái, không trừ ví
-        order.setStatus("SHIPPED");
+        // Đổi trạng thái thành PAID (Đã thanh toán)
+        order.setStatus("PAID");
         orderDAO.update(order);
 
         Long_Payment payment = new Long_Payment(order, "BANK_TRANSFER", BigDecimal.valueOf(amount));
         paymentDAO.save(payment);
+
+        // ✅ FIX: TỰ ĐỘNG TẠO SHIPMENT SAU THANH TOÁN THÀNH CÔNG
+        if (address != null && !address.isEmpty()) {
+            shipmentService.createShipment(orderId, "Giao Tiêu Chuẩn", address, null);
+        }
     }
     
     public void payByBankTransfer(String username, Long orderId, double amount) throws Exception {
@@ -195,6 +207,14 @@ public class PaymentService {
 
         Long_Payment refundLog = new Long_Payment(order, "REFUND", refundAmount);
         paymentDAO.save(refundLog);
+    }
+
+    // ✅ FIX: Tạo Shipment cho phương thức thanh toán COD
+    public void createShipmentForCOD(Long orderId, String address) throws Exception {
+        if (orderId == null || address == null || address.isEmpty()) {
+            throw new Exception("Thông tin đơn hàng hoặc địa chỉ không hợp lệ!");
+        }
+        shipmentService.createShipment(orderId, "Giao Tiêu Chuẩn", address, null);
     }
 
     private Dinh_User findUser(String username) {

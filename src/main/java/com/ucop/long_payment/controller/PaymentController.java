@@ -145,7 +145,7 @@ public class PaymentController {
             Optional<ButtonType> result = confirmAlert.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
                 // Nếu bấm OK mới thực hiện trừ tiền
-                service.payOrder(currentUser.getUsername(), selectedOrder.getId(), "", shipFee);
+                service.payOrder(currentUser.getUsername(), selectedOrder.getId(), "", shipFee, address);
                 showInfo("Thành công", "Đã trừ tiền ví! Đơn hàng đang được giao đến: " + address);
                 loadData(); 
             }
@@ -174,7 +174,7 @@ public class PaymentController {
             boolean confirm = showQRConfirmDialog(selectedOrder.getId(), finalTotal, shipMethod, shipFee, address);
             
             if (confirm) {
-                service.payByBankTransfer(currentUser.getUsername(), selectedOrder.getId(), finalTotal);
+                service.payByBankTransfer(currentUser.getUsername(), selectedOrder.getId(), finalTotal, address);
                 showInfo("Thành công", "Đã xác nhận chuyển khoản! Đơn hàng đang được giao.");
                 loadData();
             }
@@ -183,7 +183,7 @@ public class PaymentController {
         }
     }
 
-    // --- 3. THANH TOÁN COD ---
+    // --- 3. THANH TOÁN COD - TỰ ĐỘNG TẠO SHIPMENT ---
     @FXML
     public void handlePayCOD() {
         Hieu_Order selectedOrder = cbOrdersToPay.getValue();
@@ -195,11 +195,18 @@ public class PaymentController {
         String address = showAddressDialog();
         if (address == null) return;
 
-        selectedOrder.setStatus("COD_PENDING"); 
-        orderDAO.update(selectedOrder);
-        
-        showInfo("Thành công", "Đơn hàng #" + selectedOrder.getId() + " đã xác nhận COD.");
-        loadData();
+        try {
+            selectedOrder.setStatus("COD_PENDING"); 
+            orderDAO.update(selectedOrder);
+            
+            // ✅ FIX: TỰ ĐỘNG TẠO SHIPMENT CHO COD
+            service.createShipmentForCOD(selectedOrder.getId(), address);
+            
+            showInfo("Thành công", "Đơn hàng #" + selectedOrder.getId() + " đã xác nhận COD.");
+            loadData();
+        } catch (Exception e) {
+            showError("Lỗi", "Không thể tạo vận đơn: " + e.getMessage());
+        }
     }
 
     // --- 4. HOÀN TIỀN ---

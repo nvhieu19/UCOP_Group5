@@ -57,7 +57,7 @@ public class Hieu_Order {
         item.setOrder(this);
     }
 
-    // Getters & Setters (Bạn hãy generate đầy đủ trong Eclipse nhé)
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public LocalDateTime getOrderDate() { return orderDate; }

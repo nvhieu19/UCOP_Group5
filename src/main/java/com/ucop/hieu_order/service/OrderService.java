@@ -53,7 +53,7 @@ public class OrderService {
         BigDecimal tax = subTotal.multiply(BigDecimal.valueOf(0.10));
         order.setTaxAmount(tax);
 
-        // 3. Tính Ship (Luôn tính 30,000 đ nếu có sản phẩm, trừ khi giỏ trống)
+        // 3. Tính Ship (Luôn tính 30)
         BigDecimal ship = BigDecimal.ZERO;
         if (totalItems > 0) {
             // Có sản phẩm trong giỏ -> luôn tính phí ship 30,000 đ

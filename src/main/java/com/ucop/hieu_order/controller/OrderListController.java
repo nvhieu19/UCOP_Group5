@@ -199,7 +199,7 @@ public class OrderListController {
             return;
         }
 
-        // LOGIC THANH TOÁN (Gọi API xịn của Module SV4 - Long)
+        // LOGIC THANH TOÁN (Gọi API xịn của - Long)
         try {
             String username = selected.getCustomer().getUsername();
             
