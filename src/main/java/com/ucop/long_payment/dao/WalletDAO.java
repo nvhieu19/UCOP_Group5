@@ -12,7 +12,8 @@ public class WalletDAO extends AbstractDAO<Long_Wallet, Long> {
     public Long_Wallet findByUserId(Long userId) {
         try (Session session = getSession()) {
             String hql = "FROM Long_Wallet w WHERE w.user.id = :uid";
-            Query<Long_Wallet> query = session.createQuery(hql, Long_Wallet.class);
+            @SuppressWarnings("unchecked")
+            Query<Long_Wallet> query = session.createQuery(hql);
             query.setParameter("uid", userId);
             return query.uniqueResult();
         }

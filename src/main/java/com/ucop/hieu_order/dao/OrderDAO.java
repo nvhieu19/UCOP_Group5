@@ -23,7 +23,8 @@ public class OrderDAO extends AbstractDAO<Hieu_Order, Long> {
         }
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             String hql = "FROM Hieu_Order WHERE status IN (:statuses) AND customer.id = :userId";
-            Query<Hieu_Order> query = session.createQuery(hql, Hieu_Order.class);
+            @SuppressWarnings("unchecked")
+            Query<Hieu_Order> query = session.createQuery(hql);
             query.setParameterList("statuses", statuses);
             query.setParameter("userId", userId);
             return query.list();

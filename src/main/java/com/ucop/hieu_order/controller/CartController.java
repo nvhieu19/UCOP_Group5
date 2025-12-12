@@ -64,7 +64,15 @@ public class CartController {
             currentOrder.addOrderItem(item); // Thêm vào logic
             cartItems.add(item); // Thêm vào giao diện
             
-            reCalculate(); // Tính lại tiền ngay lập tức
+            // FIX: Không clear promotion code - giữ lại để tính lại chính xác
+            // Chỉ reset input fields
+            
+            reCalculate(); // Tính lại tiền ngay lập tức (bao gồm cả phí ship)
+            
+            // Clear input sau khi thêm thành công
+            txtQuantity.clear();
+            cbProducts.setValue(null);
+            cbProducts.getSelectionModel().clearSelection();
             
         } catch (NumberFormatException e) {
             showAlert("Lỗi", "Số lượng không hợp lệ!");
@@ -83,6 +91,19 @@ public class CartController {
 
     // Hàm trung tâm để tính toán và hiển thị lại số liệu
     private void reCalculate() {
+        // FIX: Đảm bảo tất cả item trong cartItems có giá được set đúng
+        for (Hieu_OrderItem cartItem : cartItems) {
+            if (cartItem.getPrice() == null || cartItem.getPrice().doubleValue() == 0) {
+                // Nếu item chưa có giá, lấy từ sản phẩm gốc
+                if (cartItem.getItem() != null && cartItem.getItem().getPrice() != null) {
+                    cartItem.setPrice(cartItem.getItem().getPrice());
+                }
+            }
+        }
+        
+        // Sync cartItems vào currentOrder.orderItems
+        currentOrder.setOrderItems(new java.util.ArrayList<>(cartItems));
+        
         String code = txtPromoCode.getText();
         orderService.calculateOrderDetails(currentOrder, code);
         updateOrderDisplay();

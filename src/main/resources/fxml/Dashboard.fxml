@@ -9,7 +9,7 @@
 
 <BorderPane fx:id="mainPane" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.dinh_admin.controller.DashboardController">
    <top>
-      <Label text="UCOP DASHBOARD - QUẢN LÝ TỔNG HỢP" BorderPane.alignment="CENTER">
+      <Label text="DASHBOARD - QUẢN LÝ TỔNG HỢP" BorderPane.alignment="CENTER">
          <font>
             <Font name="System Bold" size="24.0" />
          </font>
@@ -34,7 +34,7 @@
             
             <Button fx:id="btnAudit" mnemonicParsing="false" onAction="#showAuditLog" prefWidth="200.0" text="🕒 Nhật ký Hoạt động" />
             
-            <Button mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
+            <Button fx:id="btnCategory" mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
             
             <Button fx:id="btnProduct" mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
             
@@ -45,6 +45,10 @@
             <Button fx:id="btnPayment" mnemonicParsing="false" onAction="#showPayment" prefWidth="200.0" text="💳 Thanh toán &amp; Ví" />
             
             <Button fx:id="btnReport" mnemonicParsing="false" onAction="#showReport" prefWidth="200.0" text="📊 Báo cáo &amp; Thống kê" />
+            
+            <Button fx:id="btnShipment" mnemonicParsing="false" onAction="#showShipment" prefWidth="200.0" style="-fx-background-color: #27ae60; -fx-text-fill: white;" text="🚚 Quản lý Vận chuyển" />
+            
+            <Button mnemonicParsing="false" onAction="#handleChangePassword" prefWidth="200.0" style="-fx-background-color: #9b59b6; -fx-text-fill: white;" text="🔐 Đổi mật khẩu" />
             
             <Button mnemonicParsing="false" onAction="#handleLogout" prefWidth="200.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" text="Đăng xuất" />
          </children>

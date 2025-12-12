@@ -53,13 +53,56 @@ public class UserService {
         recordAudit("UPDATE", performedBy, "users", "Updated user info: " + user.getUsername());
     }
 
+    // 5. Chức năng Đổi mật khẩu (Change Password)
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        Dinh_User user = userDAO.findByUsernameAndPassword(username, oldPassword);
+        
+        if (user == null) {
+            return false; // Mật khẩu cũ sai
+        }
+        
+        // Cập nhật mật khẩu mới
+        user.setPassword(newPassword);
+        userDAO.update(user);
+        
+        // Ghi audit log
+        recordAudit("CHANGE_PASSWORD", username, "users", "User changed password");
+        
+        return true;
+    }
+
     // --- Hàm phụ trợ: Ghi Audit Log ---
-    private void recordAudit(String action, String who, String table, String desc) {
+    public void recordAudit(String action, String who, String table, String desc) {
         try {
             Dinh_AuditLog log = new Dinh_AuditLog(action, who, table, desc);
             auditDAO.save(log);
         } catch (Exception e) {
             e.printStackTrace(); // Log lỗi nhưng không làm crash app
+        }
+    }
+    public String deleteUser(Long userId, String performedBy) {
+        try {
+            // 1. Kiểm tra user có tồn tại không
+            Dinh_User user = userDAO.findById(userId);
+            if (user == null) return "User không tồn tại!";
+
+            // 2. Gọi lệnh xóa
+            userDAO.delete(userId);
+            
+            // 3. [QUAN TRỌNG] Kiểm tra lại xem nó chết thật chưa?
+            // Nếu xóa rồi mà tìm vẫn thấy -> Nghĩa là xóa thất bại (do AbstractDAO nuốt lỗi)
+            Dinh_User checkAlive = userDAO.findById(userId);
+            if (checkAlive != null) {
+                return "Không thể xóa User này vì họ đã có dữ liệu liên quan (Đơn hàng/Ví). Hãy dùng chức năng KHÓA!";
+            }
+            
+            // 4. Nếu chết thật rồi thì ghi log và báo OK
+            recordAudit("DELETE", performedBy, "users", "Deleted user ID: " + userId);
+            return "OK"; 
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Lỗi hệ thống: " + e.getMessage();
         }
     }
 }

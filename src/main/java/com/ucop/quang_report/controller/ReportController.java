@@ -76,6 +76,22 @@ public class ReportController {
         Double total = reportService.getTotalRevenue();
         series.getData().add(new XYChart.Data<>("Tổng Thu (PAID)", total));
         
+        // FIX: Thêm thống kê tỷ lệ hoàn/hủy
+        java.util.Map<String, Long> stats = reportService.getOrderCancelRefundStats();
+        long totalOrders = stats.getOrDefault("TOTAL", 0L);
+        long canceledOrders = stats.getOrDefault("CANCELED", 0L);
+        long refundedOrders = stats.getOrDefault("REFUNDED", 0L);
+        long successfulOrders = stats.getOrDefault("SUCCESSFUL", 0L);
+        
+        // Tính tỷ lệ %
+        double cancelRate = totalOrders > 0 ? (canceledOrders * 100.0 / totalOrders) : 0;
+        double refundRate = totalOrders > 0 ? (refundedOrders * 100.0 / totalOrders) : 0;
+        double successRate = totalOrders > 0 ? (successfulOrders * 100.0 / totalOrders) : 0;
+        
+        series.getData().add(new XYChart.Data<>("Đơn thành công (%)", successRate));
+        series.getData().add(new XYChart.Data<>("Đơn hủy (%)", cancelRate));
+        series.getData().add(new XYChart.Data<>("Đơn hoàn tiền (%)", refundRate));
+        
         barChartRevenue.getData().add(series);
     }
 

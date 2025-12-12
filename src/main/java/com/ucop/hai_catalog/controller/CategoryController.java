@@ -54,6 +54,19 @@ public class CategoryController {
         // Thêm một option null/trống đại diện cho "Danh mục gốc"
         parentOptions.add(0, null); 
         cbParent.setItems(parentOptions);
+        
+        // FIX: Thêm StringConverter để hiển thị tên danh mục thay vì object reference
+        cbParent.setConverter(new javafx.util.StringConverter<Hai_Category>() {
+            @Override
+            public String toString(Hai_Category category) {
+                return (category == null) ? "— (Danh mục gốc)" : category.getName();
+            }
+
+            @Override
+            public Hai_Category fromString(String string) {
+                return null;
+            }
+        });
     }
     
     private void setupListeners() {
@@ -90,9 +103,16 @@ public class CategoryController {
                 showAlert("Thành công", "Đã thêm danh mục mới: " + newCat.getName());
             } else {
                 // CẬP NHẬT (UPDATE)
+                // FIX: Kiểm tra không được chọn chính nó làm danh mục cha
+                Hai_Category selectedParent = cbParent.getValue();
+                if (selectedParent != null && selectedParent.getId().equals(selectedCategory.getId())) {
+                    showAlert("Lỗi", "Danh mục không thể là cha của chính nó!");
+                    return;
+                }
+                
                 selectedCategory.setName(txtName.getText());
                 selectedCategory.setDescription(txtDescription.getText());
-                selectedCategory.setParent(cbParent.getValue());
+                selectedCategory.setParent(selectedParent);
                 
                 service.updateCategory(selectedCategory);
                 showAlert("Thành công", "Đã cập nhật danh mục: " + selectedCategory.getName());
