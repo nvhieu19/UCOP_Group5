@@ -15,6 +15,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
+import javafx.beans.property.SimpleObjectProperty;
 
 import java.text.DecimalFormat;
 import java.util.List;
@@ -28,6 +29,7 @@ public class PaymentController {
     @FXML private TableView<Long_Payment> tableHistory;
     @FXML private ComboBox<Hieu_Order> cbOrdersToPay;
     @FXML private Label lblOrderTotal;
+    @FXML private TableColumn<Long_Payment, Long> colHistoryOrderId;
 
     private PaymentService service = new PaymentService();
     private OrderDAO orderDAO = new OrderDAO();
@@ -36,29 +38,32 @@ public class PaymentController {
 
     @FXML
     public void initialize() {
-        // [QUAN TRỌNG] Lấy user từ SessionManager (Cách này đang hoạt động tốt)
         currentUser = SessionManager.getInstance().getCurrentUser();
         if (currentUser == null) {
             showError("Lỗi", "Chưa đăng nhập! Vui lòng đăng nhập lại.");
             return;
         }
         setupOrderComboBox();
+        setupHistoryTable();
         loadData();
     }
 
-    // Không cần hàm setUsername nữa vì đã lấy từ Session
-    
+    private void setupHistoryTable() {
+        if (colHistoryOrderId != null) {
+            colHistoryOrderId.setCellValueFactory(cellData -> {
+                if (cellData.getValue().getOrder() != null) {
+                    return new SimpleObjectProperty<>(cellData.getValue().getOrder().getId());
+                }
+                return null;
+            });
+        }
+    }
+
     private void loadData() {
         if (currentUser == null) return;
-        
-        // Load ví
         Long_Wallet wallet = service.getWallet(currentUser.getUsername());
         if (wallet != null) lblBalance.setText(df.format(wallet.getBalance()) + " VNĐ");
-        
-        // Load lịch sử
         tableHistory.setItems(FXCollections.observableArrayList(service.getHistory(currentUser.getUsername())));
-        
-        // Load đơn chưa trả
         loadUnpaidOrders();
     }
 
@@ -96,7 +101,7 @@ public class PaymentController {
         } catch (Exception e) { showError("Lỗi", "Số tiền không hợp lệ!"); }
     }
 
-    // --- 1. THANH TOÁN BẰNG VÍ (Nhanh) ---
+    // --- 1. THANH TOÁN BẰNG VÍ (ĐÃ SỬA: HIỆN BẢNG XÁC NHẬN CHI TIẾT) ---
     @FXML
     public void handlePayByWallet() {
         Hieu_Order selectedOrder = cbOrdersToPay.getValue();
@@ -109,11 +114,41 @@ public class PaymentController {
         if (address == null) return;
 
         try {
+            // Tính toán chi tiết để hiển thị cho người dùng xem trước
             double shipFee = 30000;
-            service.payOrder(currentUser.getUsername(), selectedOrder.getId(), "", shipFee);
-            
-            showInfo("Thành công", "Đã trừ tiền ví! Đơn hàng đang được giao đến: " + address);
-            loadData(); 
+            double subTotal = selectedOrder.getSubTotal().doubleValue();
+            double tax = selectedOrder.getTaxAmount().doubleValue();
+            double finalTotal = service.calculateFinalAmount(selectedOrder, "", shipFee);
+
+            // [MỚI] Hiện bảng xác nhận chi tiết tiền nong
+            String confirmMsg = String.format(
+                "Xác nhận thanh toán đơn hàng #%d?\n\n" +
+                "Tiền hàng:      %15s VNĐ\n" +
+                "Thuế VAT (10%%): %15s VNĐ\n" +
+                "Phí Ship:       %15s VNĐ\n" +
+                "-----------------------------------\n" +
+                "TỔNG TRỪ VÍ:    %15s VNĐ",
+                selectedOrder.getId(),
+                df.format(subTotal),
+                df.format(tax),
+                df.format(shipFee),
+                df.format(finalTotal)
+            );
+
+            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmAlert.setTitle("Xác nhận thanh toán Ví");
+            confirmAlert.setHeaderText("Chi tiết giao dịch");
+            confirmAlert.setContentText(confirmMsg);
+            // Chỉnh font chữ dạng Monospaced để các số tiền thẳng hàng cho đẹp
+            confirmAlert.getDialogPane().lookup(".content").setStyle("-fx-font-family: 'Consolas', 'Monospaced';");
+
+            Optional<ButtonType> result = confirmAlert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                // Nếu bấm OK mới thực hiện trừ tiền
+                service.payOrder(currentUser.getUsername(), selectedOrder.getId(), "", shipFee);
+                showInfo("Thành công", "Đã trừ tiền ví! Đơn hàng đang được giao đến: " + address);
+                loadData(); 
+            }
         } catch (Exception e) {
             showError("Thất bại", e.getMessage());
         }
@@ -173,7 +208,8 @@ public class PaymentController {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Hoàn tiền");
         dialog.setHeaderText("Nhập ID đơn hàng cần hoàn tiền:");
-        dialog.setContentText("Order ID:");
+        dialog.setContentText("Nhập Mã Đơn (Cột 'Mã Đơn' trong bảng dưới):");
+        
         Optional<String> result = dialog.showAndWait();
         if (result.isPresent()) {
             try {

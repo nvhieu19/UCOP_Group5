@@ -65,6 +65,9 @@
       <TableView fx:id="tableHistory" VBox.vgrow="ALWAYS">
         <columns>
           <TableColumn text="Mã GD" prefWidth="60"><cellValueFactory><PropertyValueFactory property="id"/></cellValueFactory></TableColumn>
+          
+          <TableColumn fx:id="colHistoryOrderId" text="Mã Đơn" prefWidth="80" style="-fx-alignment: CENTER; -fx-font-weight: bold; -fx-text-fill: #2980b9;"/>
+          
           <TableColumn text="Ngày giao dịch" prefWidth="180"><cellValueFactory><PropertyValueFactory property="paymentDate"/></cellValueFactory></TableColumn>
           <TableColumn text="Số tiền (VNĐ)" prefWidth="150"><cellValueFactory><PropertyValueFactory property="amount"/></cellValueFactory></TableColumn>
           <TableColumn text="Loại giao dịch" prefWidth="120"><cellValueFactory><PropertyValueFactory property="paymentMethod"/></cellValueFactory></TableColumn>

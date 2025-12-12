@@ -21,13 +21,12 @@ public class PaymentService {
     // Dùng AbstractDAO để lấy Promotion của Quang nhanh gọn
     private AbstractDAO<Quang_Promotion, Long> promoDAO = new AbstractDAO<Quang_Promotion, Long>() {};
 
-    // 1. Lấy ví (Hỗ trợ cả cách gọi cũ và mới)
+    // 1. Lấy ví
     public Long_Wallet getWallet(String username) {
         Dinh_User user = findUser(username);
         return getMyWallet(user);
     }
 
-    // Hàm này giữ lại để tương thích với code bên Hiếu (OrderListController)
     public Long_Wallet getMyWallet(Dinh_User user) {
         if (user == null) return null;
         Long_Wallet wallet = walletDAO.findByUserId(user.getId());
@@ -52,11 +51,11 @@ public class PaymentService {
         return paymentDAO.findByUsername(username);
     }
 
-    // --- PHẦN NÂNG CAO: TÍNH TOÁN SHIP & THANH TOÁN ---
+    // --- LOGIC THANH TOÁN CHÍNH ---
 
-    // Tìm đơn hàng chưa thanh toán
     public Hieu_Order findPendingOrder(String username, Long orderId) {
         Hieu_Order order = orderDAO.findById(orderId);
+        // Chỉ lấy đơn chưa trả và chưa ship
         if (order != null && order.getCustomer().getUsername().equals(username) 
                 && !"PAID".equals(order.getStatus()) && !"SHIPPED".equals(order.getStatus())) {
             return order;
@@ -64,18 +63,28 @@ public class PaymentService {
         return null;
     }
 
-    // Logic tính phí Ship: CỐ ĐỊNH 30K
+    // [CỐ ĐỊNH] Phí ship luôn là 30k
     public double getShippingFee(double orderValue, String shippingMethod) {
-        return 30000; // Luôn là 30k bất kể đơn to nhỏ
+        return 30000; 
     }
 
-    // Tính tổng tiền cuối cùng (Có Voucher + Phí Ship cụ thể)
+    // [CÔNG THỨC CHUẨN] Tính tổng tiền (Sửa lỗi 53 tỷ)
     public double calculateFinalAmount(Hieu_Order order, String voucherCode, double shippingFee) {
-        double subTotal = order.getTotalAmount().doubleValue();
-        double tax = subTotal * 0.1; // Thuế 10%
-        double discount = 0;
+        // 1. Lấy tiền hàng (SubTotal)
+        double subTotal = (order.getSubTotal() != null) ? order.getSubTotal().doubleValue() : 0;
+        
+        // 2. Lấy thuế (Tax)
+        double tax = (order.getTaxAmount() != null) ? order.getTaxAmount().doubleValue() : 0;
 
-        // Check Voucher của Quang
+        // *Phòng hờ đơn cũ thiếu dữ liệu*: Tự tính lại nếu = 0
+        if (subTotal == 0 && order.getTotalAmount() != null && order.getTotalAmount().doubleValue() > 0) {
+            double oldTotal = order.getTotalAmount().doubleValue();
+            subTotal = oldTotal / 1.1; 
+            tax = subTotal * 0.1;
+        }
+
+        double discount = 0;
+        // Check Voucher
         if (voucherCode != null && !voucherCode.isEmpty()) {
             try {
                 List<Quang_Promotion> promos = promoDAO.findAll();
@@ -85,28 +94,26 @@ public class PaymentService {
                         break;
                     }
                 }
-            } catch (Exception e) {
-                // Bỏ qua lỗi nếu bảng Promotion chưa có dữ liệu
-            }
+            } catch (Exception e) {}
         }
 
+        // TỔNG = HÀNG + THUẾ + SHIP (30k) - GIẢM GIÁ
         double finalAmount = subTotal + tax + shippingFee - discount;
         return finalAmount > 0 ? finalAmount : 0;
     }
 
-    // Hàm hỗ trợ tính toán mặc định (để code cũ không lỗi)
     public double calculateFinalAmount(Hieu_Order order, String voucherCode) {
         return calculateFinalAmount(order, voucherCode, 30000);
     }
 
-    // [QUAN TRỌNG] Thực hiện thanh toán BẰNG VÍ (Trừ tiền thật)
-    public void payOrder(String username, Long orderId, String voucherCode, double shippingFee) throws Exception {
+    // --- THANH TOÁN BẰNG VÍ (Gọn nhẹ, không tạo Shipment) ---
+    public void payOrder(String username, Long orderId, String voucherCode, double shippingFee, String address) throws Exception {
         Long_Wallet wallet = getWallet(username);
         Hieu_Order order = findPendingOrder(username, orderId);
 
         if (order == null) throw new Exception("Không tìm thấy đơn hàng hoặc đơn đã thanh toán!");
 
-        // Tính tiền cần trừ
+        // Tính tiền chuẩn
         double finalAmount = calculateFinalAmount(order, voucherCode, shippingFee);
 
         // Kiểm tra số dư
@@ -118,7 +125,7 @@ public class PaymentService {
         wallet.setBalance(wallet.getBalance().subtract(BigDecimal.valueOf(finalAmount)));
         walletDAO.update(wallet);
 
-        // 2. Cập nhật trạng thái đơn hàng -> SHIPPED
+        // 2. Đổi trạng thái -> SHIPPED (Đang vận chuyển)
         order.setStatus("SHIPPED");
         orderDAO.update(order);
 
@@ -126,36 +133,38 @@ public class PaymentService {
         Long_Payment payment = new Long_Payment(order, "WALLET_QR", BigDecimal.valueOf(finalAmount));
         paymentDAO.save(payment);
     }
-
-    // Hàm overload để tương thích code cũ
+    
+    // Các hàm overload giữ nguyên để tương thích
+    public void payOrder(String username, Long orderId, String voucherCode, double shippingFee) throws Exception {
+        payOrder(username, orderId, voucherCode, shippingFee, null);
+    }
     public void payOrder(String username, Long orderId, String voucherCode) throws Exception {
         payOrder(username, orderId, voucherCode, 30000);
     }
 
-    // --- [MỚI] Xử lý thanh toán qua NGÂN HÀNG (Quét QR) ---
-    // Không trừ ví, chỉ xác nhận đơn
-    public void payByBankTransfer(String username, Long orderId, double amount) throws Exception {
+    // --- THANH TOÁN NGÂN HÀNG (QR) ---
+    public void payByBankTransfer(String username, Long orderId, double amount, String address) throws Exception {
         Hieu_Order order = findPendingOrder(username, orderId);
-        if (order == null) throw new Exception("Đơn hàng không hợp lệ hoặc đã thanh toán!");
+        if (order == null) throw new Exception("Đơn hàng không hợp lệ!");
 
-        // 1. Không trừ ví (Vì khách chuyển khoản từ ngoài vào)
-        
-        // 2. Cập nhật trạng thái -> SHIPPED
+        // Chỉ đổi trạng thái, không trừ ví
         order.setStatus("SHIPPED");
         orderDAO.update(order);
 
-        // 3. Lưu lịch sử (Loại: BANK_TRANSFER)
         Long_Payment payment = new Long_Payment(order, "BANK_TRANSFER", BigDecimal.valueOf(amount));
         paymentDAO.save(payment);
     }
+    
+    public void payByBankTransfer(String username, Long orderId, double amount) throws Exception {
+        payByBankTransfer(username, orderId, amount, null);
+    }
 
-    // --- CHỨC NĂNG HOÀN TIỀN (REFUND) ---
+    // --- HOÀN TIỀN (Sửa lỗi hoàn thiếu) ---
     public void refundOrder(String adminUsername, Long orderId) throws Exception {
         Hieu_Order order = orderDAO.findById(orderId);
         
         if (order == null) throw new Exception("Không tìm thấy đơn hàng ID: " + orderId);
         
-        // Cho phép hoàn tiền cả đơn SHIPPED
         if (!"PAID".equals(order.getStatus()) && !"SHIPPED".equals(order.getStatus())) {
             throw new Exception("Đơn hàng này chưa thanh toán, không thể hoàn tiền!");
         }
@@ -163,7 +172,20 @@ public class PaymentService {
         String customerName = order.getCustomer().getUsername();
         Long_Wallet customerWallet = getWallet(customerName);
 
-        BigDecimal refundAmount = order.getTotalAmount(); 
+        // Lấy tiền hàng + thuế để hoàn
+        BigDecimal subTotal = order.getSubTotal();
+        BigDecimal tax = order.getTaxAmount();
+
+        // Tự tính lại nếu DB thiếu dữ liệu (Fix cho đơn cũ)
+        if (subTotal == null) {
+             subTotal = order.getTotalAmount().divide(BigDecimal.valueOf(1.1), java.math.RoundingMode.HALF_UP);
+        }
+        if (tax == null || tax.compareTo(BigDecimal.ZERO) == 0) {
+             tax = subTotal.multiply(BigDecimal.valueOf(0.1));
+        }
+
+        // Hoàn lại: Hàng + Thuế (Ship 30k không hoàn)
+        BigDecimal refundAmount = subTotal.add(tax);
 
         customerWallet.deposit(refundAmount);
         walletDAO.update(customerWallet);
@@ -177,7 +199,6 @@ public class PaymentService {
 
     private Dinh_User findUser(String username) {
         return new AbstractDAO<Dinh_User, Long>(){}.findAll().stream()
-                .filter(u -> u.getUsername().equals(username))
-                .findFirst().orElse(null);
+                .filter(u -> u.getUsername().equals(username)).findFirst().orElse(null);
     }
 }
