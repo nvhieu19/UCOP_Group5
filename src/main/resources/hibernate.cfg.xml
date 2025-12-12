@@ -7,24 +7,12 @@
         <property name="connection.driver_class">com.mysql.cj.jdbc.Driver</property>
       	<property name="connection.url">jdbc:mysql://localhost:3306/ucop_project?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=Asia/Ho_Chi_Minh</property>
         <property name="connection.username">root</property>
-<<<<<<< HEAD
         <property name="connection.password">2079</property>
-=======
-        <property name="connection.password">123</property>
->>>>>>> branch 'master' of https://github.com/nvhieu19/UCOP_Group5.git
         <property name="dialect">org.hibernate.dialect.MySQL8Dialect</property>
         <property name="show_sql">true</property>
         <property name="format_sql">true</property>
         <property name="hbm2ddl.auto">update</property>
         
-<<<<<<< HEAD
-        </session-factory>
-</hibernate-configuration>
-
-
-
-
-=======
         <!-- KHAI BÁO ENTITY ĐỂ HIBERNATE NHẬN DIỆN -->
         <mapping class="com.ucop.dinh_admin.Dinh_User"/>
         <mapping class="com.ucop.hieu_order.Hieu_Order"/>
@@ -33,4 +21,3 @@
         
     </session-factory>
 </hibernate-configuration>
->>>>>>> branch 'master' of https://github.com/nvhieu19/UCOP_Group5.git
