@@ -10,20 +10,34 @@ import java.util.List;
 
 public class ReportService {
     
-    // DAO để quản lý khuyến mãi (Thêm/Xóa Voucher)
+    // DAO để quản lý khuyến mãi (Sử dụng AbstractDAO có sẵn)
     private AbstractDAO<Quang_Promotion, Long> promoDAO = new AbstractDAO<Quang_Promotion, Long>() {};
 
-    // 1. Lấy danh sách khuyến mãi
+    // 1. Lấy danh sách khuyến mãi (Read)
     public List<Quang_Promotion> getAllPromotions() {
         return promoDAO.findAll();
     }
 
-    // 2. Thêm khuyến mãi mới
+    // 2. Thêm khuyến mãi mới (Create)
     public void addPromotion(Quang_Promotion p) {
         promoDAO.save(p);
     }
+    
+    // --- [SV5 BỔ SUNG] HOÀN THIỆN CRUD ---
+    
+    // 3. Cập nhật khuyến mãi (Update)
+    public void updatePromotion(Quang_Promotion p) {
+        promoDAO.update(p);
+    }
 
-    // 3. Thống kê Top sản phẩm bán chạy (Cho PieChart)
+    // 4. Xóa khuyến mãi (Delete)
+    public void deletePromotion(Long promoId) {
+        promoDAO.delete(promoId);
+    }
+    
+    // -------------------------------------
+
+    // 5. Thống kê Top sản phẩm bán chạy (Cho PieChart)
     // Trả về List các mảng Object: [Tên sản phẩm, Tổng số lượng bán]
     public List<Object[]> getTopSellingProducts() {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
@@ -39,8 +53,7 @@ public class ReportService {
         }
     }
 
-    // 4. Thống kê Doanh thu (Cho BarChart) - Ở đây demo lấy tất cả đơn đã PAID
-    // Thực tế có thể group by Ngày/Tháng
+    // 6. Thống kê Doanh thu (Cho BarChart) - Lấy tổng các đơn đã PAID
     public Double getTotalRevenue() {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             String hql = "SELECT SUM(o.totalAmount) FROM Hieu_Order o WHERE o.status = 'PAID'";

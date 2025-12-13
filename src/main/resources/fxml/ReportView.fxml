@@ -21,24 +21,40 @@
   <tabs>
     <Tab text="Quản lý Khuyến mãi (Promotion)">
       <content>
-        <VBox spacing="10.0">
+        <VBox spacing="15.0">
            <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
            <children>
               <Label text="DANH SÁCH MÃ GIẢM GIÁ" textFill="#8e44ad"><font><Font name="System Bold" size="18.0" /></font></Label>
               
-              <TableView fx:id="tablePromo" prefHeight="250.0">
+              <TableView fx:id="tablePromo" prefHeight="300.0" VBox.vgrow="ALWAYS">
                 <columns>
-                  <TableColumn text="Mã Code" prefWidth="100"><cellValueFactory><PropertyValueFactory property="code"/></cellValueFactory></TableColumn>
-                  <TableColumn text="Giá trị giảm" prefWidth="100"><cellValueFactory><PropertyValueFactory property="discountValue"/></cellValueFactory></TableColumn>
-                  <TableColumn text="Loại" prefWidth="80"><cellValueFactory><PropertyValueFactory property="discountType"/></cellValueFactory></TableColumn>
+                  <TableColumn text="Mã Code" prefWidth="150"><cellValueFactory><PropertyValueFactory property="code"/></cellValueFactory></TableColumn>
+                  <TableColumn text="Giá trị giảm" prefWidth="150"><cellValueFactory><PropertyValueFactory property="discountValue"/></cellValueFactory></TableColumn>
+                  <TableColumn text="Loại" prefWidth="100"><cellValueFactory><PropertyValueFactory property="discountType"/></cellValueFactory></TableColumn>
                 </columns>
               </TableView>
 
-              <HBox spacing="10.0" alignment="CENTER_LEFT">
-                 <TextField fx:id="txtCode" promptText="Nhập mã (VD: SALE10)" />
-                 <TextField fx:id="txtValue" promptText="Giá trị (VD: 50000)" />
-                 <Button text="Tạo Mã Mới" onAction="#handleAddPromo" style="-fx-background-color: #8e44ad; -fx-text-fill: white;"/>
-              </HBox>
+              <VBox spacing="10.0" style="-fx-border-color: #bdc3c7; -fx-padding: 15; -fx-border-radius: 5; -fx-background-color: #f9f9f9;">
+                 <Label text="Thông tin chi tiết &amp; Thao tác:" textFill="#7f8c8d"><font><Font name="System Bold" size="12.0" /></font></Label>
+                 
+                 <HBox spacing="15.0" alignment="CENTER_LEFT">
+                     <VBox spacing="5.0">
+                        <Label text="Mã Code:" />
+                        <TextField fx:id="txtCode" promptText="VD: SALE10" prefWidth="200"/>
+                     </VBox>
+                     
+                     <VBox spacing="5.0">
+                        <Label text="Giá trị giảm:" />
+                        <TextField fx:id="txtValue" promptText="VD: 50000" prefWidth="200"/>
+                     </VBox>
+                     
+                     <HBox spacing="10.0" alignment="BOTTOM_LEFT">
+                        <Button fx:id="btnSavePromo" text="Tạo Mã Mới" onAction="#handleSavePromo" prefWidth="120" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                        <Button fx:id="btnDeletePromo" text="Xóa" onAction="#handleDeletePromo" prefWidth="80" disable="true" style="-fx-background-color: #c0392b; -fx-text-fill: white;"/>
+                        <Button text="Làm mới" onAction="#handleClearPromo" prefWidth="80" style="-fx-background-color: #95a5a6; -fx-text-fill: white;"/>
+                     </HBox>
+                 </HBox>
+              </VBox>
            </children>
         </VBox>
       </content>
@@ -49,18 +65,18 @@
         <VBox spacing="20.0" alignment="TOP_CENTER">
            <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
            <children>
-              <Label text="THỐNG KÊ DOANH THU &amp; SẢN PHẨM" textFill="#c0392b"><font><Font name="System Bold" size="20.0" /></font></Label>
+              <Label text="DASHBOARD THỐNG KÊ DOANH THU" textFill="#c0392b"><font><Font name="System Bold" size="20.0" /></font></Label>
               
-              <HBox spacing="20.0" prefHeight="400.0">
-                 <PieChart fx:id="pieChartProducts" title="Top Sản Phẩm Bán Chạy" />
+              <HBox spacing="20.0" prefHeight="450.0" VBox.vgrow="ALWAYS">
+                 <PieChart fx:id="pieChartProducts" title="Top Sản Phẩm Bán Chạy" HBox.hgrow="ALWAYS" />
                  
-                 <BarChart fx:id="barChartRevenue" title="Tổng Doanh Thu">
+                 <BarChart fx:id="barChartRevenue" title="Tổng Doanh Thu Hệ Thống" HBox.hgrow="ALWAYS">
                    <xAxis><CategoryAxis label="Danh mục" /></xAxis>
                    <yAxis><NumberAxis label="VNĐ" /></yAxis>
                  </BarChart>
               </HBox>
               
-              <Button text="Làm mới dữ liệu" onAction="#loadChartData" />
+              <Button text="🔄 Cập nhật dữ liệu biểu đồ" onAction="#loadChartData" style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
            </children>
         </VBox>
       </content>
