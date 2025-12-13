@@ -13,7 +13,8 @@ public class PaymentDAO extends AbstractDAO<Long_Payment, Long> {
         try (Session session = getSession()) {
             // Truy vấn HQL: Join từ Payment -> Order -> Customer -> Username
             String hql = "SELECT p FROM Long_Payment p WHERE p.order.customer.username = :u ORDER BY p.paymentDate DESC";
-            Query<Long_Payment> query = session.createQuery(hql, Long_Payment.class);
+            @SuppressWarnings("unchecked")
+            Query<Long_Payment> query = session.createQuery(hql);
             query.setParameter("u", username);
             return query.list();
         } catch (Exception e) {
@@ -26,7 +27,8 @@ public class PaymentDAO extends AbstractDAO<Long_Payment, Long> {
     public List<Long_Payment> findByUserId(Long userId) {
         try (Session session = getSession()) {
             String hql = "SELECT p FROM Long_Payment p WHERE p.order.customer.id = :uid ORDER BY p.paymentDate DESC";
-            Query<Long_Payment> query = session.createQuery(hql, Long_Payment.class);
+            @SuppressWarnings("unchecked")
+            Query<Long_Payment> query = session.createQuery(hql);
             query.setParameter("uid", userId);
             return query.list();
         }

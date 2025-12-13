@@ -6,10 +6,11 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.layout.Region?>
 
 <BorderPane fx:id="mainPane" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ucop.dinh_admin.controller.DashboardController">
    <top>
-      <Label text="UCOP DASHBOARD - QUẢN LÝ TỔNG HỢP" BorderPane.alignment="CENTER">
+      <Label text="DASHBOARD - QUẢN LÝ TỔNG HỢP" BorderPane.alignment="CENTER">
          <font>
             <Font name="System Bold" size="24.0" />
          </font>
@@ -30,23 +31,29 @@
                </font>
             </Label>
             
-            <Button fx:id="btnUser" mnemonicParsing="false" onAction="#showUserMgmt" prefWidth="200.0" text="👤 Quản lý Người dùng (Admin)" />
+            <Button fx:id="btnUser" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showUserMgmt" prefWidth="200.0" text="👤 Quản lý Người dùng (Admin)" />
             
-            <Button fx:id="btnAudit" mnemonicParsing="false" onAction="#showAuditLog" prefWidth="200.0" text="🕒 Nhật ký Hoạt động" />
+            <Button fx:id="btnAudit" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showAuditLog" prefWidth="200.0" text="🕒 Nhật ký Hoạt động" />
             
-            <Button mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
+            <Button fx:id="btnCategory" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showCategory" prefWidth="200.0" text="🗂️ Quản lý Danh mục" />
             
-            <Button fx:id="btnProduct" mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
+            <Button fx:id="btnProduct" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showCatalog" prefWidth="200.0" text="📦 Quản lý Kho &amp; Sản phẩm" />
             
-            <Button fx:id="btnCart" mnemonicParsing="false" onAction="#showOrder" prefWidth="200.0" text="🛒 Giỏ hàng" />
+            <Button fx:id="btnCart" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showOrder" prefWidth="200.0" text="🛒 Giỏ hàng" />
 			
-            <Button fx:id="btnOrder" mnemonicParsing="false" onAction="#showOrderList" prefWidth="200.0" text="📜 Danh sách Đơn hàng" />
+            <Button fx:id="btnOrder" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showOrderList" prefWidth="200.0" text="📜 Danh sách Đơn hàng" />
             
-            <Button fx:id="btnPayment" mnemonicParsing="false" onAction="#showPayment" prefWidth="200.0" text="💳 Thanh toán &amp; Ví" />
+            <Button fx:id="btnPayment" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showPayment" prefWidth="200.0" text="💳 Thanh toán &amp; Ví" />
             
-            <Button fx:id="btnReport" mnemonicParsing="false" onAction="#showReport" prefWidth="200.0" text="📊 Báo cáo &amp; Thống kê" />
+            <Button fx:id="btnReport" alignment="BASELINE_LEFT" mnemonicParsing="false" onAction="#showReport" prefWidth="200.0" text="📊 Báo cáo &amp; Thống kê" />
             
-            <Button mnemonicParsing="false" onAction="#handleLogout" prefWidth="200.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" text="Đăng xuất" />
+            <Region VBox.vgrow="ALWAYS" />
+            
+            <Button fx:id="btnShipment" mnemonicParsing="false" onAction="#showShipment" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #27ae60; -fx-text-fill: white;" text="🚚 Quản lý Vận chuyển" />
+            
+            <Button mnemonicParsing="false" onAction="#handleChangePassword" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #9b59b6; -fx-text-fill: white;" text="🔐 Đổi mật khẩu" />
+            
+            <Button mnemonicParsing="false" onAction="#handleLogout" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" text="Đăng xuất" />
          </children>
       </VBox>
    </left>
